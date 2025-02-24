@@ -2,6 +2,92 @@
   "pages": [
     "pages/index/index"
   ],
+  "subPackages": [
+    {
+      "root": "pageSub/Kingdom-core",
+      "pages": [
+        "Kingdom-core"
+      ]
+    },
+    {
+      "root": "pageSub/Calculator",
+      "pages": [
+        "Calculator"
+      ]
+    },
+    {
+      "root": "pageSub/BMI",
+      "pages": [
+        "BMI"
+      ]
+    },
+    {
+      "root": "pageSub/Currency-exchange",
+      "pages": [
+        "Currency-exchange"
+      ]
+    },
+    {
+      "root": "pageSub/Social-security-period",
+      "pages": [
+        "Social-security-period"
+      ]
+    },
+    {
+      "root": "pageSub/Retirement-age",
+      "pages": [
+        "Retirement-age"
+      ]
+    },
+    {
+      "root": "pageSub/Pension-calculator",
+      "pages": [
+        "Pension-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/Mortgage-calculator",
+      "pages": [
+        "Mortgage-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/Car-calculator",
+      "pages": [
+        "Car-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/Individual-calculator",
+      "pages": [
+        "Individual-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/Pregnancy-calculator",
+      "pages": [
+        "Pregnancy-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/Unit-converter",
+      "pages": [
+        "Unit-converter"
+      ]
+    },
+    {
+      "root": "pageSub/Qrcode-generator",
+      "pages": [
+        "Qrcode-generator"
+      ]
+    },
+    {
+      "root": "pageSub/Relative-calculator",
+      "pages": [
+        "Relative-calculator"
+      ]
+    }
+  ],
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "uni-app",

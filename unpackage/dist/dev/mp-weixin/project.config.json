@@ -18,8 +18,8 @@
     }
   },
   "compileType": "miniprogram",
-  "libVersion": "3.6.4",
-  "appid": "touristappid",
+  "libVersion": "",
+  "appid": "wx505872f65a61f463",
   "projectname": "magic-chest",
   "condition": {},
   "editorSetting": {

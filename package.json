@@ -27,7 +27,9 @@
     "eslint-plugin-prettier": "^5.2.3",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
-    "prettier": "^3.5.0"
+    "prettier": "^3.5.0",
+    "sass": "^1.84.0",
+    "sass-loader": "^10.1.1"
   },
   "husky": {
     "hooks": {
@@ -39,5 +41,8 @@
     "*.js": "eslint --fix",
     "*.ts": "eslint --fix",
     "*.vue": "eslint --fix"
+  },
+  "dependencies": {
+    "@dcloudio/uni-ui": "^1.5.7"
   }
 }

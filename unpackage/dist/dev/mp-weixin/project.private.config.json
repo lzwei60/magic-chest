@@ -3,5 +3,6 @@
   "projectname": "magic-chest",
   "setting": {
     "compileHotReLoad": true
-  }
+  },
+  "libVersion": "3.7.7"
 }

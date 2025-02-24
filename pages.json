@@ -1,10 +1,166 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"pages": [
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "uni-app"
+				"navigationBarTitleText": "帮帮小工具"
 			}
+		}
+	],
+	"subPackages": [
+		{
+			"root": "pageSub/Kingdom-core",
+			"pages": [
+				{
+					"path": "Kingdom-core",
+					"style": {
+						"navigationBarTitleText": "金证门禁"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Calculator",
+			"pages": [
+				{
+					"path": "Calculator",
+					"style": {
+						"navigationBarTitleText": "计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/BMI",
+			"pages": [
+				{
+					"path": "BMI",
+					"style": {
+						"navigationBarTitleText": "BMI计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Currency-exchange",
+			"pages": [
+				{
+					"path": "Currency-exchange",
+					"style": {
+						"navigationBarTitleText": "汇率转换器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Social-security-period",
+			"pages": [
+				{
+					"path": "Social-security-period",
+					"style": {
+						"navigationBarTitleText": "社保缴费年限计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Retirement-age",
+			"pages": [
+				{
+					"path": "Retirement-age",
+					"style": {
+						"navigationBarTitleText": "退休年龄计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Pension-calculator",
+			"pages": [
+				{
+					"path": "Pension-calculator",
+					"style": {
+						"navigationBarTitleText": "退休养老金计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Mortgage-calculator",
+			"pages": [
+				{
+					"path": "Mortgage-calculator",
+					"style": {
+						"navigationBarTitleText": "房贷计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Car-calculator",
+			"pages": [
+				{
+					"path": "Car-calculator",
+					"style": {
+						"navigationBarTitleText": "车贷计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Individual-calculator",
+			"pages": [
+				{
+					"path": "Individual-calculator",
+					"style": {
+						"navigationBarTitleText": "个税计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Pregnancy-calculator",
+			"pages": [
+				{
+					"path": "Pregnancy-calculator",
+					"style": {
+						"navigationBarTitleText": "孕期计算器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Unit-converter",
+			"pages": [
+				{
+					"path": "Unit-converter",
+					"style": {
+						"navigationBarTitleText": "单位转换器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Qrcode-generator",
+			"pages": [
+				{
+					"path": "Qrcode-generator",
+					"style": {
+						"navigationBarTitleText": "二维码生成器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/Relative-calculator",
+			"pages": [
+				{
+					"path": "Relative-calculator",
+					"style": {
+						"navigationBarTitleText": "亲戚称呼计算器"
+					}
+				}
+			]
 		}
 	],
 	"globalStyle": {
@@ -13,5 +169,11 @@
 		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
 	},
-	"uniIdRouter": {}
+	"uniIdRouter": {},
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+		}
+	}
 }
