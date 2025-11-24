@@ -23,8 +23,7 @@
 				<uni-data-select
 					v-model="selectedCard"
 					:localdata="cardList"
-					placeholder="请选择门卡"
-					@change="handleCardChange" />
+					placeholder="请选择门卡" />
 			</view>
 			<button class="refresh-btn" @click="refreshQRCode">
 				<uni-icons type="refresh" size="16" color="#fff"></uni-icons>
@@ -84,6 +83,8 @@
 							placeholder="请输入卡号"
 							:clearable="false"
 							class="input" />
+
+						<uni-icons type="scan" size="30" @click="scanQrCode"></uni-icons>
 					</view>
 				</view>
 			</uni-popup-dialog>
@@ -283,6 +284,50 @@ const loadCardList = () => {
 			saveSelectedCard()
 		}
 	}
+}
+
+/**
+ * 打开扫描二维码
+ */
+const scanQrCode = () => {
+	uni.showLoading({
+		title: '扫码识别中',
+	})
+
+	uni.scanCode({
+		scanType: ['qrCode'],
+		success(detail) {
+			uni.hideLoading()
+
+			const code = detail.path || detail.result || ''
+			if (!code) {
+				return uni.showToast({
+					title: '无效的二维码',
+					icon: 'none',
+				})
+			}
+			const codec = new DooerCodec()
+			const data = codec.decodeLocalQrcode(code)
+			if (!data) {
+				return uni.showToast({
+					title: '无效的二维码',
+					icon: 'none',
+				})
+			}
+			const card = data.cardid
+			if (cardList.value.some((item) => item.value === card)) {
+				return uni.showToast({
+					title: '该门卡已存在',
+					icon: 'none',
+				})
+			}
+			newCard.value.number = card
+		},
+		fail() {
+			uni.hideLoading()
+			uni.showToast({ title: '扫码失败', icon: 'none' })
+		},
+	})
 }
 
 // 页面加载时读取数据

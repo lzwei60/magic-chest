@@ -612,7 +612,8 @@ const MINI_PROGRAM_PAGE_RUNTIME_HOOKS = /* @__PURE__ */ (() => {
   return {
     onPageScroll: 1,
     onShareAppMessage: 1 << 1,
-    onShareTimeline: 1 << 2
+    onShareTimeline: 1 << 2,
+    onShareChat: 1 << 3
   };
 })();
 function isUniLifecycleHook(name, value, checkType = true) {
@@ -2913,11 +2914,15 @@ const getPublicInstance = (i2) => {
     return getExposeProxy(i2) || i2.proxy;
   return getPublicInstance(i2.parent);
 };
+function getComponentInternalInstance(i2) {
+  return i2;
+}
 const publicPropertiesMap = (
   // Move PURE marker to new line to workaround compiler discarding it
   // due to type annotation
   /* @__PURE__ */ extend(/* @__PURE__ */ Object.create(null), {
-    $: (i2) => i2,
+    // fixed by xxxxxx
+    $: getComponentInternalInstance,
     // fixed by xxxxxx vue-i18n 在 dev 模式，访问了 $el，故模拟一个假的
     // $el: i => i.vnode.el,
     $el: (i2) => i2.__$el || (i2.__$el = {}),
@@ -4110,7 +4115,8 @@ function createComponentInstance(vnode, parent, suspense) {
     $uniElements: /* @__PURE__ */ new Map(),
     $templateUniElementRefs: [],
     $templateUniElementStyles: {},
-    $eS: {}
+    $eS: {},
+    $eA: {}
   };
   {
     instance.ctx = createDevRenderContext(instance);
@@ -4608,6 +4614,7 @@ function patch(instance, data, oldData) {
   }
   data = deepCopy(data);
   data.$eS = instance.$eS || {};
+  data.$eA = instance.$eA || {};
   const ctx = instance.ctx;
   const mpType = ctx.mpType;
   if (mpType === "page" || mpType === "component") {
@@ -4786,6 +4793,7 @@ function warnRef(ref2) {
 const queuePostRenderEffect = queuePostFlushCb;
 function mountComponent(initialVNode, options) {
   const instance = initialVNode.component = createComponentInstance(initialVNode, options.parentComponent, null);
+  instance.renderer = options.mpType ? options.mpType : "component";
   {
     instance.ctx.$onApplyOptions = onApplyOptions;
     instance.ctx.$children = [];
@@ -5124,7 +5132,8 @@ function injectLifecycleHook(name, hook, publicThis, instance) {
 }
 function initHooks$1(options, instance, publicThis) {
   const mpType = options.mpType || publicThis.$mpType;
-  if (!mpType || mpType === "component") {
+  if (!mpType || mpType === "component" || // instance.renderer 标识页面是否作为组件渲染
+  mpType === "page" && instance.renderer === "component") {
     return;
   }
   Object.keys(options).forEach((name) => {
@@ -5466,6 +5475,16 @@ function createApp$1(rootComponent, rootProps = null) {
   return createVueApp(rootComponent, rootProps).use(plugin);
 }
 const createSSRApp = createApp$1;
+function getLocaleLanguage$1() {
+  var _a;
+  let localeLanguage = "";
+  {
+    const appBaseInfo = ((_a = wx.getAppBaseInfo) === null || _a === void 0 ? void 0 : _a.call(wx)) || wx.getSystemInfoSync();
+    const language = appBaseInfo && appBaseInfo.language ? appBaseInfo.language : LOCALE_EN;
+    localeLanguage = normalizeLocale(language) || LOCALE_EN;
+  }
+  return localeLanguage;
+}
 function validateProtocolFail(name, msg) {
   console.warn(`${name}: ${msg}`);
 }
@@ -5770,10 +5789,10 @@ function handlePromise(promise) {
 function promisify$1(name, fn) {
   return (args = {}, ...rest) => {
     if (hasCallback(args)) {
-      return wrapperReturnValue(name, invokeApi(name, fn, args, rest));
+      return wrapperReturnValue(name, invokeApi(name, fn, extend({}, args), rest));
     }
     return wrapperReturnValue(name, handlePromise(new Promise((resolve2, reject) => {
-      invokeApi(name, fn, extend(args, { success: resolve2, fail: reject }), rest);
+      invokeApi(name, fn, extend({}, args, { success: resolve2, fail: reject }), rest);
     })));
   };
 }
@@ -5871,9 +5890,15 @@ let isIOS = false;
 let deviceWidth = 0;
 let deviceDPR = 0;
 function checkDeviceWidth() {
-  const { windowWidth, pixelRatio, platform } = Object.assign({}, wx.getWindowInfo(), {
-    platform: wx.getDeviceInfo().platform
-  });
+  var _a, _b;
+  let windowWidth, pixelRatio, platform;
+  {
+    const windowInfo = ((_a = wx.getWindowInfo) === null || _a === void 0 ? void 0 : _a.call(wx)) || wx.getSystemInfoSync();
+    const deviceInfo = ((_b = wx.getDeviceInfo) === null || _b === void 0 ? void 0 : _b.call(wx)) || wx.getSystemInfoSync();
+    windowWidth = windowInfo.windowWidth;
+    pixelRatio = windowInfo.pixelRatio;
+    platform = deviceInfo.platform;
+  }
   deviceWidth = windowWidth;
   deviceDPR = pixelRatio;
   isIOS = platform === "ios";
@@ -6035,7 +6060,9 @@ const $once = defineSyncApi(API_ONCE, (name, callback) => {
 const $off = defineSyncApi(API_OFF, (name, callback) => {
   if (!isArray(name))
     name = name ? [name] : [];
-  name.forEach((n2) => eventBus.off(n2, callback));
+  name.forEach((n2) => {
+    eventBus.off(n2, callback);
+  });
 }, OffProtocol);
 const $emit = defineSyncApi(API_EMIT, (name, ...args) => {
   eventBus.emit(name, ...args);
@@ -6162,7 +6189,7 @@ function promisify(name, api) {
   }
   return function promiseApi(options = {}, ...rest) {
     if (isFunction(options.success) || isFunction(options.fail) || isFunction(options.complete)) {
-      return wrapperReturnValue(name, invokeApi(name, api, options, rest));
+      return wrapperReturnValue(name, invokeApi(name, api, extend({}, options), rest));
     }
     return wrapperReturnValue(name, handlePromise(new Promise((resolve2, reject) => {
       invokeApi(name, api, extend({}, options, {
@@ -6227,6 +6254,9 @@ function initWrapper(protocols2) {
   }
   return function wrapper(methodName, method) {
     const hasProtocol = hasOwn$1(protocols2, methodName);
+    if (!hasProtocol && typeof wx[methodName] !== "function") {
+      return method;
+    }
     const needWrapper = hasProtocol || isFunction(protocols2.returnValue) || isContextApi(methodName) || isTaskApi(methodName);
     const hasMethod = hasProtocol || isFunction(method);
     if (!hasProtocol && !method) {
@@ -6266,7 +6296,7 @@ const getLocale = () => {
   if (app && app.$vm) {
     return app.$vm.$locale;
   }
-  return normalizeLocale(wx.getAppBaseInfo().language) || LOCALE_EN;
+  return getLocaleLanguage$1();
 };
 const setLocale = (locale) => {
   const app = isFunction(getApp) && getApp();
@@ -6323,11 +6353,29 @@ function getOSInfo(system, platform) {
     osName = platform;
     osVersion = system;
   } else {
-    osName = system.split(" ")[0] || "";
+    osName = system.split(" ")[0] || platform;
     osVersion = system.split(" ")[1] || "";
   }
+  osName = osName.toLowerCase();
+  switch (osName) {
+    case "harmony":
+    case "ohos":
+    case "openharmony":
+      osName = "harmonyos";
+      break;
+    case "iphone os":
+      osName = "ios";
+      break;
+    case "mac":
+    case "darwin":
+      osName = "macos";
+      break;
+    case "windows_nt":
+      osName = "windows";
+      break;
+  }
   return {
-    osName: osName.toLocaleLowerCase(),
+    osName,
     osVersion
   };
 }
@@ -6348,9 +6396,9 @@ function populateParameters(fromRes, toRes) {
     appVersion: "1.0.0",
     appVersionCode: "100",
     appLanguage: getAppLanguage(hostLanguage),
-    uniCompileVersion: "4.45",
-    uniCompilerVersion: "4.45",
-    uniRuntimeVersion: "4.45",
+    uniCompileVersion: "4.85",
+    uniCompilerVersion: "4.85",
+    uniRuntimeVersion: "4.85",
     uniPlatform: "mp-weixin",
     deviceBrand,
     deviceModel: model,
@@ -6387,7 +6435,7 @@ function getGetDeviceType(fromRes, model) {
       mac: "pc"
     };
     const deviceTypeMapsKeys = Object.keys(deviceTypeMaps);
-    const _model = model.toLocaleLowerCase();
+    const _model = model.toLowerCase();
     for (let index2 = 0; index2 < deviceTypeMapsKeys.length; index2++) {
       const _m = deviceTypeMapsKeys[index2];
       if (_model.indexOf(_m) !== -1) {
@@ -6401,7 +6449,7 @@ function getGetDeviceType(fromRes, model) {
 function getDeviceBrand(brand) {
   let deviceBrand = brand;
   if (deviceBrand) {
-    deviceBrand = deviceBrand.toLocaleLowerCase();
+    deviceBrand = deviceBrand.toLowerCase();
   }
   return deviceBrand;
 }
@@ -6499,9 +6547,9 @@ const getAppBaseInfo = {
       appLanguage: getAppLanguage(hostLanguage),
       isUniAppX: false,
       uniPlatform: "mp-weixin",
-      uniCompileVersion: "4.45",
-      uniCompilerVersion: "4.45",
-      uniRuntimeVersion: "4.45"
+      uniCompileVersion: "4.85",
+      uniCompilerVersion: "4.85",
+      uniRuntimeVersion: "4.85"
     };
     extend(toRes, parameters);
   }
@@ -6681,11 +6729,23 @@ function createSelectorQuery() {
   const query = wx$2.createSelectorQuery();
   const oldIn = query.in;
   query.in = function newIn(component) {
+    if (component.$scope) {
+      return oldIn.call(this, component.$scope);
+    }
     return oldIn.call(this, initComponentMocks(component));
   };
   return query;
 }
 const wx$2 = initWx();
+if (!wx$2.canIUse("getAppBaseInfo")) {
+  wx$2.getAppBaseInfo = wx$2.getSystemInfoSync;
+}
+if (!wx$2.canIUse("getWindowInfo")) {
+  wx$2.getWindowInfo = wx$2.getSystemInfoSync;
+}
+if (!wx$2.canIUse("getDeviceInfo")) {
+  wx$2.getDeviceInfo = wx$2.getSystemInfoSync;
+}
 let baseInfo = wx$2.getAppBaseInfo && wx$2.getAppBaseInfo();
 if (!baseInfo) {
   baseInfo = wx$2.getSystemInfoSync();
@@ -6727,84 +6787,137 @@ var protocols = /* @__PURE__ */ Object.freeze({
 });
 const wx$1 = initWx();
 var index = initUni(shims, protocols, wx$1);
+function initRuntimeSocket(hosts, port, id) {
+  if (hosts == "" || port == "" || id == "")
+    return Promise.resolve(null);
+  return hosts.split(",").reduce((promise, host2) => {
+    return promise.then((socket) => {
+      if (socket != null)
+        return Promise.resolve(socket);
+      return tryConnectSocket(host2, port, id);
+    });
+  }, Promise.resolve(null));
+}
+const SOCKET_TIMEOUT = 500;
+function tryConnectSocket(host2, port, id) {
+  return new Promise((resolve2, reject) => {
+    const socket = index.connectSocket({
+      url: `ws://${host2}:${port}/${id}`,
+      multiple: true,
+      // 支付宝小程序 是否开启多实例
+      fail() {
+        resolve2(null);
+      }
+    });
+    const timer = setTimeout(() => {
+      socket.close({
+        code: 1006,
+        reason: "connect timeout"
+      });
+      resolve2(null);
+    }, SOCKET_TIMEOUT);
+    socket.onOpen((e2) => {
+      clearTimeout(timer);
+      resolve2(socket);
+    });
+    socket.onClose((e2) => {
+      clearTimeout(timer);
+      resolve2(null);
+    });
+    socket.onError((e2) => {
+      clearTimeout(timer);
+      resolve2(null);
+    });
+  });
+}
 const CONSOLE_TYPES = ["log", "warn", "error", "info", "debug"];
-let sendConsole = null;
-const messageQueue = [];
-function sendConsoleMessages(messages2) {
-  if (sendConsole == null) {
-    messageQueue.push(...messages2);
-    return;
-  }
-  sendConsole(JSON.stringify({
-    type: "console",
-    data: messages2
-  }));
-}
-function setSendConsole(value) {
-  sendConsole = value;
-  if (value != null && messageQueue.length > 0) {
-    const messages2 = messageQueue.slice();
-    messageQueue.length = 0;
-    sendConsoleMessages(messages2);
-  }
-}
 const originalConsole = /* @__PURE__ */ CONSOLE_TYPES.reduce((methods, type) => {
   methods[type] = console[type].bind(console);
   return methods;
 }, {});
-const atFileRegex = /^at\s+[\w/./-]+:\d+$/;
-function rewriteConsole() {
-  function wrapConsole(type) {
-    return function(...args) {
-      const originalArgs = [...args];
-      if (originalArgs.length) {
-        const maybeAtFile = originalArgs[originalArgs.length - 1];
-        if (typeof maybeAtFile === "string" && atFileRegex.test(maybeAtFile)) {
-          originalArgs.pop();
-        }
-      }
-      {
-        originalConsole[type](...originalArgs);
-      }
-      sendConsoleMessages([formatMessage(type, args)]);
-    };
-  }
-  if (isConsoleWritable()) {
-    CONSOLE_TYPES.forEach((type) => {
-      console[type] = wrapConsole(type);
+let sendError = null;
+const errorQueue = /* @__PURE__ */ new Set();
+const errorExtra = {};
+function sendErrorMessages(errors) {
+  if (sendError == null) {
+    errors.forEach((error) => {
+      errorQueue.add(error);
     });
-    return function restoreConsole() {
-      CONSOLE_TYPES.forEach((type) => {
-        console[type] = originalConsole[type];
-      });
-    };
-  } else {
-    const oldLog = index.__f__;
-    if (oldLog) {
-      index.__f__ = function(...args) {
-        const [type, filename, ...rest] = args;
-        oldLog(type, "", ...rest);
-        sendConsoleMessages([formatMessage(type, [...rest, filename])]);
-      };
-      return function restoreConsole() {
-        index.__f__ = oldLog;
-      };
+    return;
+  }
+  const data = errors.map((err) => {
+    if (typeof err === "string") {
+      return err;
+    }
+    const isPromiseRejection = err && "promise" in err && "reason" in err;
+    const prefix = isPromiseRejection ? "UnhandledPromiseRejection: " : "";
+    if (isPromiseRejection) {
+      err = err.reason;
+    }
+    if (err instanceof Error && err.stack) {
+      if (err.message && !err.stack.includes(err.message)) {
+        return `${prefix}${err.message}
+${err.stack}`;
+      }
+      return `${prefix}${err.stack}`;
+    }
+    if (typeof err === "object" && err !== null) {
+      try {
+        return prefix + JSON.stringify(err);
+      } catch (err2) {
+        return prefix + String(err2);
+      }
+    }
+    return prefix + String(err);
+  }).filter(Boolean);
+  if (data.length > 0) {
+    sendError(JSON.stringify(Object.assign({
+      type: "error",
+      data
+    }, errorExtra)));
+  }
+}
+function setSendError(value, extra = {}) {
+  sendError = value;
+  Object.assign(errorExtra, extra);
+  if (value != null && errorQueue.size > 0) {
+    const errors = Array.from(errorQueue);
+    errorQueue.clear();
+    sendErrorMessages(errors);
+  }
+}
+function initOnError() {
+  function onError2(error) {
+    try {
+      if (typeof PromiseRejectionEvent !== "undefined" && error instanceof PromiseRejectionEvent && error.reason instanceof Error && error.reason.message && error.reason.message.includes(`Cannot create property 'errMsg' on string 'taskId`)) {
+        return;
+      }
+      if (true) {
+        originalConsole.error(error);
+      }
+      sendErrorMessages([error]);
+    } catch (err) {
+      originalConsole.error(err);
     }
   }
-  return function restoreConsole() {
-  };
-}
-function isConsoleWritable() {
-  const value = console.log;
-  const sym = Symbol();
-  try {
-    console.log = sym;
-  } catch (ex) {
-    return false;
+  if (typeof index !== "undefined") {
+    if (typeof index.onError === "function") {
+      index.onError(onError2);
+    }
+    if (typeof index.onUnhandledRejection === "function") {
+      index.onUnhandledRejection(onError2);
+    }
   }
-  const isWritable = console.log === sym;
-  console.log = value;
-  return isWritable;
+  return function offError2() {
+    if (typeof index !== "undefined") {
+      if (typeof index.offError === "function") {
+        index.offError(onError2);
+      }
+      if (typeof index.offUnhandledRejection === "function") {
+        index.offUnhandledRejection(onError2);
+      }
+    }
+  };
 }
 function formatMessage(type, args) {
   try {
@@ -6813,7 +6926,6 @@ function formatMessage(type, args) {
       args: formatArgs(args)
     };
   } catch (e2) {
-    originalConsole.error(e2);
   }
   return {
     type,
@@ -6830,7 +6942,76 @@ function formatArg(arg, depth = 0) {
       value: "[Maximum depth reached]"
     };
   }
-  return ARG_FORMATTERS[typeof arg](arg, depth);
+  const type = typeof arg;
+  switch (type) {
+    case "string":
+      return formatString(arg);
+    case "number":
+      return formatNumber(arg);
+    case "boolean":
+      return formatBoolean(arg);
+    case "object":
+      try {
+        return formatObject(arg, depth);
+      } catch (e2) {
+        return {
+          type: "object",
+          value: {
+            properties: []
+          }
+        };
+      }
+    case "undefined":
+      return formatUndefined();
+    case "function":
+      return formatFunction(arg);
+    case "symbol": {
+      return formatSymbol(arg);
+    }
+    case "bigint":
+      return formatBigInt(arg);
+  }
+}
+function formatFunction(value) {
+  return {
+    type: "function",
+    value: `function ${value.name}() {}`
+  };
+}
+function formatUndefined() {
+  return {
+    type: "undefined"
+  };
+}
+function formatBoolean(value) {
+  return {
+    type: "boolean",
+    value: String(value)
+  };
+}
+function formatNumber(value) {
+  return {
+    type: "number",
+    value: String(value)
+  };
+}
+function formatBigInt(value) {
+  return {
+    type: "bigint",
+    value: String(value)
+  };
+}
+function formatString(value) {
+  return {
+    type: "string",
+    value
+  };
+}
+function formatSymbol(value) {
+  return {
+    type: "symbol",
+    value: value.description
+  };
 }
 function formatObject(value, depth) {
   if (value === null) {
@@ -6838,17 +7019,19 @@ function formatObject(value, depth) {
       type: "null"
     };
   }
-  if (isComponentPublicInstance(value)) {
-    return formatComponentPublicInstance(value, depth);
-  }
-  if (isComponentInternalInstance(value)) {
-    return formatComponentInternalInstance(value, depth);
-  }
-  if (isUniElement(value)) {
-    return formatUniElement(value, depth);
-  }
-  if (isCSSStyleDeclaration(value)) {
-    return formatCSSStyleDeclaration(value, depth);
+  {
+    if (isComponentPublicInstance(value)) {
+      return formatComponentPublicInstance(value, depth);
+    }
+    if (isComponentInternalInstance(value)) {
+      return formatComponentInternalInstance(value, depth);
+    }
+    if (isUniElement(value)) {
+      return formatUniElement(value, depth);
+    }
+    if (isCSSStyleDeclaration(value)) {
+      return formatCSSStyleDeclaration(value, depth);
+    }
   }
   if (Array.isArray(value)) {
     return {
@@ -6914,12 +7097,29 @@ function formatObject(value, depth) {
       className: value.name || "Error"
     };
   }
+  let className = void 0;
+  {
+    const constructor = value.constructor;
+    if (constructor) {
+      if (constructor.get$UTSMetadata$) {
+        className = constructor.get$UTSMetadata$().name;
+      }
+    }
+  }
+  let entries = Object.entries(value);
+  if (isHarmonyBuilderParams(value)) {
+    entries = entries.filter(([key]) => key !== "modifier" && key !== "nodeContent");
+  }
   return {
     type: "object",
+    className,
     value: {
-      properties: Object.entries(value).map(([name, value2]) => formatObjectProperty(name, value2, depth + 1))
+      properties: entries.map((entry) => formatObjectProperty(entry[0], entry[1], depth + 1))
     }
   };
+}
+function isHarmonyBuilderParams(value) {
+  return value.modifier && value.modifier._attribute && value.nodeContent;
 }
 function isComponentPublicInstance(value) {
   return value.$ && isComponentInternalInstance(value.$);
@@ -6978,14 +7178,14 @@ function formatCSSStyleDeclaration(style, depth) {
   };
 }
 function formatObjectProperty(name, value, depth) {
-  return Object.assign(formatArg(value, depth), {
-    name
-  });
+  const result = formatArg(value, depth);
+  result.name = name;
+  return result;
 }
 function formatArrayElement(value, index2, depth) {
-  return Object.assign(formatArg(value, depth), {
-    name: `${index2}`
-  });
+  const result = formatArg(value, depth);
+  result.name = `${index2}`;
+  return result;
 }
 function formatSetEntry(value, depth) {
   return {
@@ -6998,167 +7198,104 @@ function formatMapEntry(value, depth) {
     value: formatArg(value[1], depth)
   };
 }
-const ARG_FORMATTERS = {
-  function(value) {
-    return {
-      type: "function",
-      value: `function ${value.name}() {}`
-    };
-  },
-  undefined() {
-    return {
-      type: "undefined"
-    };
-  },
-  object(value, depth) {
-    return formatObject(value, depth);
-  },
-  boolean(value) {
-    return {
-      type: "boolean",
-      value: String(value)
-    };
-  },
-  number(value) {
-    return {
-      type: "number",
-      value: String(value)
-    };
-  },
-  bigint(value) {
-    return {
-      type: "bigint",
-      value: String(value)
-    };
-  },
-  string(value) {
-    return {
-      type: "string",
-      value
-    };
-  },
-  symbol(value) {
-    return {
-      type: "symbol",
-      value: value.description
-    };
-  }
-};
-function initRuntimeSocket(hosts, port, id) {
-  if (!hosts || !port || !id)
-    return Promise.resolve(null);
-  return hosts.split(",").reduce((promise, host2) => {
-    return promise.then((socket) => {
-      if (socket)
-        return socket;
-      return tryConnectSocket(host2, port, id);
-    });
-  }, Promise.resolve(null));
-}
-const SOCKET_TIMEOUT = 500;
-function tryConnectSocket(host2, port, id) {
-  return new Promise((resolve2, reject) => {
-    const socket = index.connectSocket({
-      url: `ws://${host2}:${port}/${id}`,
-      // 支付宝小程序 是否开启多实例
-      multiple: true,
-      fail() {
-        resolve2(null);
-      }
-    });
-    const timer = setTimeout(() => {
-      socket.close({
-        code: 1006,
-        reason: "connect timeout"
-      });
-      resolve2(null);
-    }, SOCKET_TIMEOUT);
-    socket.onOpen((e2) => {
-      clearTimeout(timer);
-      resolve2(socket);
-    });
-    socket.onClose((e2) => {
-      clearTimeout(timer);
-      resolve2(null);
-    });
-    socket.onError((e2) => {
-      clearTimeout(timer);
-      resolve2(null);
-    });
-  });
-}
-let sendError = null;
-const errorQueue = /* @__PURE__ */ new Set();
-function sendErrorMessages(errors) {
-  if (sendError == null) {
-    errors.forEach((error) => {
-      errorQueue.add(error);
-    });
+let sendConsole = null;
+const messageQueue = [];
+const messageExtra = {};
+const EXCEPTION_BEGIN_MARK = "---BEGIN:EXCEPTION---";
+const EXCEPTION_END_MARK = "---END:EXCEPTION---";
+function sendConsoleMessages(messages2) {
+  if (sendConsole == null) {
+    messageQueue.push(...messages2);
     return;
   }
-  sendError(JSON.stringify({
-    type: "error",
-    data: errors.map((err) => {
-      const isPromiseRejection = err && "promise" in err && "reason" in err;
-      const prefix = isPromiseRejection ? "UnhandledPromiseRejection: " : "";
-      if (isPromiseRejection) {
-        err = err.reason;
+  sendConsole(JSON.stringify(Object.assign({
+    type: "console",
+    data: messages2
+  }, messageExtra)));
+}
+function setSendConsole(value, extra = {}) {
+  sendConsole = value;
+  Object.assign(messageExtra, extra);
+  if (value != null && messageQueue.length > 0) {
+    const messages2 = messageQueue.slice();
+    messageQueue.length = 0;
+    sendConsoleMessages(messages2);
+  }
+}
+const atFileRegex = /^\s*at\s+[\w/./-]+:\d+$/;
+function rewriteConsole() {
+  function wrapConsole(type) {
+    return function(...args) {
+      {
+        const originalArgs = [...args];
+        if (originalArgs.length) {
+          const maybeAtFile = originalArgs[originalArgs.length - 1];
+          if (typeof maybeAtFile === "string" && atFileRegex.test(maybeAtFile)) {
+            originalArgs.pop();
+          }
+        }
+        originalConsole[type](...originalArgs);
       }
-      if (err instanceof Error && err.stack) {
-        return prefix + err.stack;
-      }
-      if (typeof err === "object" && err !== null) {
-        try {
-          return prefix + JSON.stringify(err);
-        } catch (err2) {
-          return prefix + String(err2);
+      if (type === "error" && args.length === 1) {
+        const arg = args[0];
+        if (typeof arg === "string" && arg.startsWith(EXCEPTION_BEGIN_MARK)) {
+          const startIndex = EXCEPTION_BEGIN_MARK.length;
+          const endIndex = arg.length - EXCEPTION_END_MARK.length;
+          sendErrorMessages([arg.slice(startIndex, endIndex)]);
+          return;
+        } else if (arg instanceof Error) {
+          sendErrorMessages([arg]);
+          return;
         }
       }
-      return prefix + String(err);
-    })
-  }));
-}
-function setSendError(value) {
-  sendError = value;
-  if (value != null && errorQueue.size > 0) {
-    const errors = Array.from(errorQueue);
-    errorQueue.clear();
-    sendErrorMessages(errors);
+      sendConsoleMessages([formatMessage(type, args)]);
+    };
   }
-}
-function initOnError() {
-  function onError2(error) {
-    try {
-      if (typeof PromiseRejectionEvent !== "undefined" && error instanceof PromiseRejectionEvent && error.reason instanceof Error && error.reason.message && error.reason.message.includes(`Cannot create property 'errMsg' on string 'taskId`)) {
-        return;
+  if (isConsoleWritable()) {
+    CONSOLE_TYPES.forEach((type) => {
+      console[type] = wrapConsole(type);
+    });
+    return function restoreConsole() {
+      CONSOLE_TYPES.forEach((type) => {
+        console[type] = originalConsole[type];
+      });
+    };
+  } else {
+    {
+      if (typeof index !== "undefined" && index.__f__) {
+        const oldLog = index.__f__;
+        if (oldLog) {
+          index.__f__ = function(...args) {
+            const [type, filename, ...rest] = args;
+            oldLog(type, "", ...rest);
+            sendConsoleMessages([formatMessage(type, [...rest, filename])]);
+          };
+          return function restoreConsole() {
+            index.__f__ = oldLog;
+          };
+        }
       }
-      if (true) {
-        originalConsole.error(error);
-      }
-      sendErrorMessages([error]);
-    } catch (err) {
-      originalConsole.error(err);
     }
   }
-  if (typeof index.onError === "function") {
-    index.onError(onError2);
-  }
-  if (typeof index.onUnhandledRejection === "function") {
-    index.onUnhandledRejection(onError2);
-  }
-  return function offError2() {
-    if (typeof index.offError === "function") {
-      index.offError(onError2);
-    }
-    if (typeof index.offUnhandledRejection === "function") {
-      index.offUnhandledRejection(onError2);
-    }
+  return function restoreConsole() {
   };
 }
+function isConsoleWritable() {
+  const value = console.log;
+  const sym = Symbol();
+  try {
+    console.log = sym;
+  } catch (ex) {
+    return false;
+  }
+  const isWritable = console.log === sym;
+  console.log = value;
+  return isWritable;
+}
 function initRuntimeSocketService() {
-  const hosts = "127.0.0.1,10.110.4.113";
+  const hosts = "127.0.0.1,10.110.0.214";
   const port = "8090";
-  const id = "mp-weixin_PXK35B";
+  const id = "mp-weixin_7xHchM";
   const lazy = typeof swan !== "undefined";
   let restoreError = lazy ? () => {
   } : initOnError();
@@ -7174,13 +7311,19 @@ function initRuntimeSocketService() {
         restoreError();
         restoreConsole();
         originalConsole.error(wrapError("开发模式下日志通道建立 socket 连接失败。"));
-        originalConsole.error(wrapError("如果是小程序平台，请勾选不校验合法域名配置。"));
+        {
+          originalConsole.error(wrapError("小程序平台，请勾选不校验合法域名配置。"));
+        }
         originalConsole.error(wrapError("如果是运行到真机，请确认手机与电脑处于同一网络。"));
         return false;
       }
-      initMiniProgramGlobalFlag();
+      {
+        initMiniProgramGlobalFlag();
+      }
       socket.onClose(() => {
-        originalConsole.error(wrapError("开发模式下日志通道 socket 连接关闭，请在 HBuilderX 中重新运行。"));
+        {
+          originalConsole.error(wrapError("开发模式下日志通道 socket 连接关闭，请在 HBuilderX 中重新运行。"));
+        }
         restoreError();
         restoreConsole();
       });
@@ -7319,6 +7462,16 @@ function findVmByVueId(instance, vuePid) {
       return parentVm;
     }
   }
+}
+function getLocaleLanguage() {
+  var _a;
+  let localeLanguage = "";
+  {
+    const appBaseInfo = ((_a = wx.getAppBaseInfo) === null || _a === void 0 ? void 0 : _a.call(wx)) || wx.getSystemInfoSync();
+    const language = appBaseInfo && appBaseInfo.language ? appBaseInfo.language : LOCALE_EN;
+    localeLanguage = normalizeLocale(language) || LOCALE_EN;
+  }
+  return localeLanguage;
 }
 const MP_METHODS = [
   "createSelectorQuery",
@@ -7586,9 +7739,7 @@ function initAppLifecycle(appOptions, vm) {
   }
 }
 function initLocale(appVm) {
-  const locale = ref(
-    normalizeLocale(wx.getAppBaseInfo().language) || LOCALE_EN
-  );
+  const locale = ref(getLocaleLanguage());
   Object.defineProperty(appVm, "$locale", {
     get() {
       return locale.value;
@@ -9069,8 +9220,8 @@ var s = n(function(e2, t2) {
         var s3 = t4 + n3, r3 = e4[s3];
         e4[s3] = 16711935 & (r3 << 8 | r3 >>> 24) | 4278255360 & (r3 << 24 | r3 >>> 8);
       }
-      var i3 = this._hash.words, o3 = e4[t4 + 0], c3 = e4[t4 + 1], p2 = e4[t4 + 2], f2 = e4[t4 + 3], g2 = e4[t4 + 4], m2 = e4[t4 + 5], y2 = e4[t4 + 6], _2 = e4[t4 + 7], w2 = e4[t4 + 8], v2 = e4[t4 + 9], I2 = e4[t4 + 10], S2 = e4[t4 + 11], T2 = e4[t4 + 12], b2 = e4[t4 + 13], E2 = e4[t4 + 14], k2 = e4[t4 + 15], P2 = i3[0], C2 = i3[1], A2 = i3[2], O2 = i3[3];
-      P2 = u2(P2, C2, A2, O2, o3, 7, a2[0]), O2 = u2(O2, P2, C2, A2, c3, 12, a2[1]), A2 = u2(A2, O2, P2, C2, p2, 17, a2[2]), C2 = u2(C2, A2, O2, P2, f2, 22, a2[3]), P2 = u2(P2, C2, A2, O2, g2, 7, a2[4]), O2 = u2(O2, P2, C2, A2, m2, 12, a2[5]), A2 = u2(A2, O2, P2, C2, y2, 17, a2[6]), C2 = u2(C2, A2, O2, P2, _2, 22, a2[7]), P2 = u2(P2, C2, A2, O2, w2, 7, a2[8]), O2 = u2(O2, P2, C2, A2, v2, 12, a2[9]), A2 = u2(A2, O2, P2, C2, I2, 17, a2[10]), C2 = u2(C2, A2, O2, P2, S2, 22, a2[11]), P2 = u2(P2, C2, A2, O2, T2, 7, a2[12]), O2 = u2(O2, P2, C2, A2, b2, 12, a2[13]), A2 = u2(A2, O2, P2, C2, E2, 17, a2[14]), P2 = h2(P2, C2 = u2(C2, A2, O2, P2, k2, 22, a2[15]), A2, O2, c3, 5, a2[16]), O2 = h2(O2, P2, C2, A2, y2, 9, a2[17]), A2 = h2(A2, O2, P2, C2, S2, 14, a2[18]), C2 = h2(C2, A2, O2, P2, o3, 20, a2[19]), P2 = h2(P2, C2, A2, O2, m2, 5, a2[20]), O2 = h2(O2, P2, C2, A2, I2, 9, a2[21]), A2 = h2(A2, O2, P2, C2, k2, 14, a2[22]), C2 = h2(C2, A2, O2, P2, g2, 20, a2[23]), P2 = h2(P2, C2, A2, O2, v2, 5, a2[24]), O2 = h2(O2, P2, C2, A2, E2, 9, a2[25]), A2 = h2(A2, O2, P2, C2, f2, 14, a2[26]), C2 = h2(C2, A2, O2, P2, w2, 20, a2[27]), P2 = h2(P2, C2, A2, O2, b2, 5, a2[28]), O2 = h2(O2, P2, C2, A2, p2, 9, a2[29]), A2 = h2(A2, O2, P2, C2, _2, 14, a2[30]), P2 = l2(P2, C2 = h2(C2, A2, O2, P2, T2, 20, a2[31]), A2, O2, m2, 4, a2[32]), O2 = l2(O2, P2, C2, A2, w2, 11, a2[33]), A2 = l2(A2, O2, P2, C2, S2, 16, a2[34]), C2 = l2(C2, A2, O2, P2, E2, 23, a2[35]), P2 = l2(P2, C2, A2, O2, c3, 4, a2[36]), O2 = l2(O2, P2, C2, A2, g2, 11, a2[37]), A2 = l2(A2, O2, P2, C2, _2, 16, a2[38]), C2 = l2(C2, A2, O2, P2, I2, 23, a2[39]), P2 = l2(P2, C2, A2, O2, b2, 4, a2[40]), O2 = l2(O2, P2, C2, A2, o3, 11, a2[41]), A2 = l2(A2, O2, P2, C2, f2, 16, a2[42]), C2 = l2(C2, A2, O2, P2, y2, 23, a2[43]), P2 = l2(P2, C2, A2, O2, v2, 4, a2[44]), O2 = l2(O2, P2, C2, A2, T2, 11, a2[45]), A2 = l2(A2, O2, P2, C2, k2, 16, a2[46]), P2 = d2(P2, C2 = l2(C2, A2, O2, P2, p2, 23, a2[47]), A2, O2, o3, 6, a2[48]), O2 = d2(O2, P2, C2, A2, _2, 10, a2[49]), A2 = d2(A2, O2, P2, C2, E2, 15, a2[50]), C2 = d2(C2, A2, O2, P2, m2, 21, a2[51]), P2 = d2(P2, C2, A2, O2, T2, 6, a2[52]), O2 = d2(O2, P2, C2, A2, f2, 10, a2[53]), A2 = d2(A2, O2, P2, C2, I2, 15, a2[54]), C2 = d2(C2, A2, O2, P2, c3, 21, a2[55]), P2 = d2(P2, C2, A2, O2, w2, 6, a2[56]), O2 = d2(O2, P2, C2, A2, k2, 10, a2[57]), A2 = d2(A2, O2, P2, C2, y2, 15, a2[58]), C2 = d2(C2, A2, O2, P2, b2, 21, a2[59]), P2 = d2(P2, C2, A2, O2, g2, 6, a2[60]), O2 = d2(O2, P2, C2, A2, S2, 10, a2[61]), A2 = d2(A2, O2, P2, C2, p2, 15, a2[62]), C2 = d2(C2, A2, O2, P2, v2, 21, a2[63]), i3[0] = i3[0] + P2 | 0, i3[1] = i3[1] + C2 | 0, i3[2] = i3[2] + A2 | 0, i3[3] = i3[3] + O2 | 0;
+      var i3 = this._hash.words, o3 = e4[t4 + 0], c3 = e4[t4 + 1], p2 = e4[t4 + 2], f2 = e4[t4 + 3], g2 = e4[t4 + 4], m2 = e4[t4 + 5], y2 = e4[t4 + 6], _2 = e4[t4 + 7], w2 = e4[t4 + 8], I2 = e4[t4 + 9], v2 = e4[t4 + 10], S2 = e4[t4 + 11], T2 = e4[t4 + 12], b2 = e4[t4 + 13], E2 = e4[t4 + 14], k2 = e4[t4 + 15], A2 = i3[0], P2 = i3[1], C2 = i3[2], O2 = i3[3];
+      A2 = u2(A2, P2, C2, O2, o3, 7, a2[0]), O2 = u2(O2, A2, P2, C2, c3, 12, a2[1]), C2 = u2(C2, O2, A2, P2, p2, 17, a2[2]), P2 = u2(P2, C2, O2, A2, f2, 22, a2[3]), A2 = u2(A2, P2, C2, O2, g2, 7, a2[4]), O2 = u2(O2, A2, P2, C2, m2, 12, a2[5]), C2 = u2(C2, O2, A2, P2, y2, 17, a2[6]), P2 = u2(P2, C2, O2, A2, _2, 22, a2[7]), A2 = u2(A2, P2, C2, O2, w2, 7, a2[8]), O2 = u2(O2, A2, P2, C2, I2, 12, a2[9]), C2 = u2(C2, O2, A2, P2, v2, 17, a2[10]), P2 = u2(P2, C2, O2, A2, S2, 22, a2[11]), A2 = u2(A2, P2, C2, O2, T2, 7, a2[12]), O2 = u2(O2, A2, P2, C2, b2, 12, a2[13]), C2 = u2(C2, O2, A2, P2, E2, 17, a2[14]), A2 = h2(A2, P2 = u2(P2, C2, O2, A2, k2, 22, a2[15]), C2, O2, c3, 5, a2[16]), O2 = h2(O2, A2, P2, C2, y2, 9, a2[17]), C2 = h2(C2, O2, A2, P2, S2, 14, a2[18]), P2 = h2(P2, C2, O2, A2, o3, 20, a2[19]), A2 = h2(A2, P2, C2, O2, m2, 5, a2[20]), O2 = h2(O2, A2, P2, C2, v2, 9, a2[21]), C2 = h2(C2, O2, A2, P2, k2, 14, a2[22]), P2 = h2(P2, C2, O2, A2, g2, 20, a2[23]), A2 = h2(A2, P2, C2, O2, I2, 5, a2[24]), O2 = h2(O2, A2, P2, C2, E2, 9, a2[25]), C2 = h2(C2, O2, A2, P2, f2, 14, a2[26]), P2 = h2(P2, C2, O2, A2, w2, 20, a2[27]), A2 = h2(A2, P2, C2, O2, b2, 5, a2[28]), O2 = h2(O2, A2, P2, C2, p2, 9, a2[29]), C2 = h2(C2, O2, A2, P2, _2, 14, a2[30]), A2 = l2(A2, P2 = h2(P2, C2, O2, A2, T2, 20, a2[31]), C2, O2, m2, 4, a2[32]), O2 = l2(O2, A2, P2, C2, w2, 11, a2[33]), C2 = l2(C2, O2, A2, P2, S2, 16, a2[34]), P2 = l2(P2, C2, O2, A2, E2, 23, a2[35]), A2 = l2(A2, P2, C2, O2, c3, 4, a2[36]), O2 = l2(O2, A2, P2, C2, g2, 11, a2[37]), C2 = l2(C2, O2, A2, P2, _2, 16, a2[38]), P2 = l2(P2, C2, O2, A2, v2, 23, a2[39]), A2 = l2(A2, P2, C2, O2, b2, 4, a2[40]), O2 = l2(O2, A2, P2, C2, o3, 11, a2[41]), C2 = l2(C2, O2, A2, P2, f2, 16, a2[42]), P2 = l2(P2, C2, O2, A2, y2, 23, a2[43]), A2 = l2(A2, P2, C2, O2, I2, 4, a2[44]), O2 = l2(O2, A2, P2, C2, T2, 11, a2[45]), C2 = l2(C2, O2, A2, P2, k2, 16, a2[46]), A2 = d2(A2, P2 = l2(P2, C2, O2, A2, p2, 23, a2[47]), C2, O2, o3, 6, a2[48]), O2 = d2(O2, A2, P2, C2, _2, 10, a2[49]), C2 = d2(C2, O2, A2, P2, E2, 15, a2[50]), P2 = d2(P2, C2, O2, A2, m2, 21, a2[51]), A2 = d2(A2, P2, C2, O2, T2, 6, a2[52]), O2 = d2(O2, A2, P2, C2, f2, 10, a2[53]), C2 = d2(C2, O2, A2, P2, v2, 15, a2[54]), P2 = d2(P2, C2, O2, A2, c3, 21, a2[55]), A2 = d2(A2, P2, C2, O2, w2, 6, a2[56]), O2 = d2(O2, A2, P2, C2, k2, 10, a2[57]), C2 = d2(C2, O2, A2, P2, y2, 15, a2[58]), P2 = d2(P2, C2, O2, A2, b2, 21, a2[59]), A2 = d2(A2, P2, C2, O2, g2, 6, a2[60]), O2 = d2(O2, A2, P2, C2, S2, 10, a2[61]), C2 = d2(C2, O2, A2, P2, p2, 15, a2[62]), P2 = d2(P2, C2, O2, A2, I2, 21, a2[63]), i3[0] = i3[0] + A2 | 0, i3[1] = i3[1] + P2 | 0, i3[2] = i3[2] + C2 | 0, i3[3] = i3[3] + O2 | 0;
     }, _doFinalize: function() {
       var t4 = this._data, n3 = t4.words, s3 = 8 * this._nDataBytes, r3 = 8 * t4.sigBytes;
       n3[r3 >>> 5] |= 128 << 24 - r3 % 32;
@@ -9186,8 +9337,8 @@ function _(e2) {
     }
   };
 }
-const w = "REJECTED", v = "NOT_PENDING";
-class I {
+const w = "REJECTED", I = "NOT_PENDING";
+class v {
   constructor({ createPromise: e2, retryRule: t2 = w } = {}) {
     this.createPromise = e2, this.status = null, this.promise = null, this.retryRule = t2;
   }
@@ -9197,7 +9348,7 @@ class I {
     switch (this.retryRule) {
       case w:
         return this.status === f;
-      case v:
+      case I:
         return this.status !== d;
     }
   }
@@ -9245,7 +9396,7 @@ class S {
 function T(e2) {
   return e2 && "string" == typeof e2 ? JSON.parse(e2) : e2;
 }
-const b = true, E = "mp-weixin", P = T(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), C = E, A = T(""), O = T("[]") || [];
+const b = true, E = "mp-weixin", A = T(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), P = E, C = T(""), O = T("[]") || [];
 let N = "";
 try {
   N = "";
@@ -9327,7 +9478,8 @@ function ee(e2) {
 }
 class te extends Error {
   constructor(e2) {
-    super(e2.message), this.errMsg = e2.message || e2.errMsg || "unknown system error", this.code = this.errCode = e2.code || e2.errCode || "SYSTEM_ERROR", this.errSubject = this.subject = e2.subject || e2.errSubject, this.cause = e2.cause, this.requestId = e2.requestId;
+    const t2 = e2.message || e2.errMsg || "unknown system error";
+    super(t2), this.errMsg = t2, this.code = this.errCode = e2.code || e2.errCode || "SYSTEM_ERROR", this.errSubject = this.subject = e2.subject || e2.errSubject, this.cause = e2.cause, this.requestId = e2.requestId;
   }
   toJson(e2 = 0) {
     if (!(e2 >= 10))
@@ -9346,7 +9498,7 @@ function ie({ token: e2, tokenExpired: t2 } = {}) {
 }
 let oe, ae;
 function ce() {
-  return oe || (oe = index.getSystemInfoSync()), oe;
+  return oe || (oe = wx$1.canIUse("getAppBaseInfo") && wx$1.canIUse("getDeviceInfo") ? { ...index.getAppBaseInfo(), ...index.getDeviceInfo() } : index.getSystemInfoSync()), oe;
 }
 function ue() {
   let e2, t2;
@@ -9399,11 +9551,11 @@ var pe = class {
     ["spaceId", "clientSecret"].forEach((t2) => {
       if (!Object.prototype.hasOwnProperty.call(e2, t2))
         throw new Error(`${t2} required`);
-    }), this.config = Object.assign({}, { endpoint: 0 === e2.spaceId.indexOf("mp-") ? "https://api.next.bspapp.com" : "https://api.bspapp.com" }, e2), this.config.provider = "aliyun", this.config.requestUrl = this.config.endpoint + "/client", this.config.envType = this.config.envType || "public", this.config.accessTokenKey = "access_token_" + this.config.spaceId, this.adapter = ne, this._getAccessTokenPromiseHub = new I({ createPromise: () => this.requestAuth(this.setupRequest({ method: "serverless.auth.user.anonymousAuthorize", params: "{}" }, "auth")).then((e3) => {
+    }), this.config = Object.assign({}, { endpoint: 0 === e2.spaceId.indexOf("mp-") ? "https://api.next.bspapp.com" : "https://api.bspapp.com" }, e2), this.config.provider = "aliyun", this.config.requestUrl = this.config.endpoint + "/client", this.config.envType = this.config.envType || "public", this.config.accessTokenKey = "access_token_" + this.config.spaceId, this.adapter = ne, this._getAccessTokenPromiseHub = new v({ createPromise: () => this.requestAuth(this.setupRequest({ method: "serverless.auth.user.anonymousAuthorize", params: "{}" }, "auth")).then((e3) => {
       if (!e3.result || !e3.result.accessToken)
         throw new te({ code: "AUTH_FAILED", message: "获取accessToken失败" });
       this.setAccessToken(e3.result.accessToken);
-    }), retryRule: v });
+    }), retryRule: I });
   }
   get hasAccessToken() {
     return !!this.accessToken;
@@ -9490,7 +9642,12 @@ var pe = class {
   }
   getTempFileURL({ fileList: e2 } = {}) {
     return new Promise((t2, n2) => {
-      Array.isArray(e2) && 0 !== e2.length || n2(new te({ code: "INVALID_PARAM", message: "fileList的元素必须是非空的字符串" })), t2({ fileList: e2.map((e3) => ({ fileID: e3, tempFileURL: e3 })) });
+      Array.isArray(e2) && 0 !== e2.length || n2(new te({ code: "INVALID_PARAM", message: "fileList的元素必须是非空的字符串" })), this.getFileInfo({ fileList: e2 }).then((n3) => {
+        t2({ fileList: e2.map((e3, t3) => {
+          const s2 = n3.fileList[t3];
+          return { fileID: e3, tempFileURL: s2 && s2.url || e3 };
+        }) });
+      });
     });
   }
   async getFileInfo({ fileList: e2 } = {}) {
@@ -9543,8 +9700,8 @@ var ye = function() {
           var f2 = u2[p2 - 15], g2 = (f2 << 25 | f2 >>> 7) ^ (f2 << 14 | f2 >>> 18) ^ f2 >>> 3, m2 = u2[p2 - 2], y2 = (m2 << 15 | m2 >>> 17) ^ (m2 << 13 | m2 >>> 19) ^ m2 >>> 10;
           u2[p2] = g2 + u2[p2 - 7] + y2 + u2[p2 - 16];
         }
-        var _2 = s3 & r3 ^ s3 & i3 ^ r3 & i3, w2 = (s3 << 30 | s3 >>> 2) ^ (s3 << 19 | s3 >>> 13) ^ (s3 << 10 | s3 >>> 22), v2 = d2 + ((a3 << 26 | a3 >>> 6) ^ (a3 << 21 | a3 >>> 11) ^ (a3 << 7 | a3 >>> 25)) + (a3 & h3 ^ ~a3 & l2) + c2[p2] + u2[p2];
-        d2 = l2, l2 = h3, h3 = a3, a3 = o3 + v2 | 0, o3 = i3, i3 = r3, r3 = s3, s3 = v2 + (w2 + _2) | 0;
+        var _2 = s3 & r3 ^ s3 & i3 ^ r3 & i3, w2 = (s3 << 30 | s3 >>> 2) ^ (s3 << 19 | s3 >>> 13) ^ (s3 << 10 | s3 >>> 22), I2 = d2 + ((a3 << 26 | a3 >>> 6) ^ (a3 << 21 | a3 >>> 11) ^ (a3 << 7 | a3 >>> 25)) + (a3 & h3 ^ ~a3 & l2) + c2[p2] + u2[p2];
+        d2 = l2, l2 = h3, h3 = a3, a3 = o3 + I2 | 0, o3 = i3, i3 = r3, r3 = s3, s3 = I2 + (w2 + _2) | 0;
       }
       n3[0] = n3[0] + s3 | 0, n3[1] = n3[1] + r3 | 0, n3[2] = n3[2] + i3 | 0, n3[3] = n3[3] + o3 | 0, n3[4] = n3[4] + a3 | 0, n3[5] = n3[5] + h3 | 0, n3[6] = n3[6] + l2 | 0, n3[7] = n3[7] + d2 | 0;
     }, _doFinalize: function() {
@@ -9556,10 +9713,10 @@ var ye = function() {
     } });
     t3.SHA256 = i2._createHelper(h2), t3.HmacSHA256 = i2._createHmacHelper(h2);
   }(Math), n2.SHA256);
-}), we = _e, ve = n(function(e2, t2) {
+}), we = _e, Ie = n(function(e2, t2) {
   e2.exports = r.HmacSHA256;
 });
-const Ie = () => {
+const ve = () => {
   let e2;
   if (!Promise) {
     e2 = () => {
@@ -9591,7 +9748,7 @@ function Ee(e2 = 32) {
   return n2;
 }
 var ke;
-function Pe(e2) {
+function Ae(e2) {
   const t2 = (n2 = e2, "[object Array]" === Object.prototype.toString.call(n2) ? e2 : [e2]);
   var n2;
   for (const e3 of t2) {
@@ -9603,22 +9760,22 @@ function Pe(e2) {
 !function(e2) {
   e2.WEB = "web", e2.WX_MP = "wx_mp";
 }(ke || (ke = {}));
-const Ce = { adapter: null, runtime: void 0 }, Ae = ["anonymousUuidKey"];
+const Pe = { adapter: null, runtime: void 0 }, Ce = ["anonymousUuidKey"];
 class Oe extends ye {
   constructor() {
-    super(), Ce.adapter.root.tcbObject || (Ce.adapter.root.tcbObject = {});
+    super(), Pe.adapter.root.tcbObject || (Pe.adapter.root.tcbObject = {});
   }
   setItem(e2, t2) {
-    Ce.adapter.root.tcbObject[e2] = t2;
+    Pe.adapter.root.tcbObject[e2] = t2;
   }
   getItem(e2) {
-    return Ce.adapter.root.tcbObject[e2];
+    return Pe.adapter.root.tcbObject[e2];
   }
   removeItem(e2) {
-    delete Ce.adapter.root.tcbObject[e2];
+    delete Pe.adapter.root.tcbObject[e2];
   }
   clear() {
-    delete Ce.adapter.root.tcbObject;
+    delete Pe.adapter.root.tcbObject;
   }
 }
 function xe(e2, t2) {
@@ -9634,7 +9791,7 @@ function xe(e2, t2) {
 class Ne {
   constructor(e2) {
     if (!this._storage) {
-      this._persistence = Ce.adapter.primaryStorage || e2.persistence, this._storage = xe(this._persistence, Ce.adapter);
+      this._persistence = Pe.adapter.primaryStorage || e2.persistence, this._storage = xe(this._persistence, Pe.adapter);
       const t2 = `access_token_${e2.env}`, n2 = `access_token_expire_${e2.env}`, s2 = `refresh_token_${e2.env}`, r2 = `anonymous_uuid_${e2.env}`, i2 = `login_type_${e2.env}`, o2 = "device_id", a2 = `token_type_${e2.env}`, c2 = `user_info_${e2.env}`;
       this.keys = { accessTokenKey: t2, accessTokenExpireKey: n2, refreshTokenKey: s2, anonymousUuidKey: r2, loginTypeKey: i2, userInfoKey: c2, deviceIdKey: o2, tokenTypeKey: a2 };
     }
@@ -9644,10 +9801,10 @@ class Ne {
       return;
     const t2 = "local" === this._persistence;
     this._persistence = e2;
-    const n2 = xe(e2, Ce.adapter);
+    const n2 = xe(e2, Pe.adapter);
     for (const e3 in this.keys) {
       const s2 = this.keys[e3];
-      if (t2 && Ae.includes(e3))
+      if (t2 && Ce.includes(e3))
         continue;
       const r2 = this._storage.getItem(s2);
       Se(r2) || Te(r2) || (n2.setItem(s2, r2), this._storage.removeItem(s2));
@@ -9770,7 +9927,7 @@ class Ve {
 }
 class Ge {
   constructor(e2) {
-    this._singlePromise = new Ve(), this._cache = Ue(e2.env), this._baseURL = `https://${e2.env}.ap-shanghai.tcb-api.tencentcloudapi.com`, this._reqClass = new Ce.adapter.reqClass({ timeout: e2.timeout, timeoutMsg: `请求在${e2.timeout / 1e3}s内未完成，已中断`, restrictedMethods: ["post"] });
+    this._singlePromise = new Ve(), this._cache = Ue(e2.env), this._baseURL = `https://${e2.env}.ap-shanghai.tcb-api.tencentcloudapi.com`, this._reqClass = new Pe.adapter.reqClass({ timeout: e2.timeout, timeoutMsg: `请求在${e2.timeout / 1e3}s内未完成，已中断`, restrictedMethods: ["post"] });
   }
   _getDeviceId() {
     if (this._deviceID)
@@ -9837,7 +9994,7 @@ function Ze() {
 class et {
   constructor(e2 = {}) {
     var t2;
-    this.config = e2, this._reqClass = new Ce.adapter.reqClass({ timeout: this.config.timeout, timeoutMsg: `请求在${this.config.timeout / 1e3}s内未完成，已中断`, restrictedMethods: ["post"] }), this._cache = Ue(this.config.env), this._localCache = (t2 = this.config.env, Le[t2]), this.oauth = new Ge(this.config), Xe(this._reqClass, "post", [Ze]), Xe(this._reqClass, "upload", [Ze]), Xe(this._reqClass, "download", [Ze]);
+    this.config = e2, this._reqClass = new Pe.adapter.reqClass({ timeout: this.config.timeout, timeoutMsg: `请求在${this.config.timeout / 1e3}s内未完成，已中断`, restrictedMethods: ["post"] }), this._cache = Ue(this.config.env), this._localCache = (t2 = this.config.env, Le[t2]), this.oauth = new Ge(this.config), Xe(this._reqClass, "post", [Ze]), Xe(this._reqClass, "upload", [Ze]), Xe(this._reqClass, "download", [Ze]);
   }
   async post(e2) {
     return await this._reqClass.post(e2);
@@ -10216,7 +10373,7 @@ class ht {
   }
 }
 const lt = function(e2, t2) {
-  t2 = t2 || Ie();
+  t2 = t2 || ve();
   const n2 = nt(this.config.env), { cloudPath: s2, filePath: r2, onUploadProgress: i2, fileType: o2 = "image" } = e2;
   return n2.send("storage.getUploadMetadata", { path: s2 }).then((e3) => {
     const { data: { url: a2, authorization: c2, token: u2, fileId: h2, cosFileId: l2 }, requestId: d2 } = e3, p2 = { key: s2, signature: c2, "x-cos-meta-fileid": l2, success_action_status: "201", "x-cos-security-token": u2 };
@@ -10229,7 +10386,7 @@ const lt = function(e2, t2) {
     t2(e3);
   }), t2.promise;
 }, dt = function(e2, t2) {
-  t2 = t2 || Ie();
+  t2 = t2 || ve();
   const n2 = nt(this.config.env), { cloudPath: s2 } = e2;
   return n2.send("storage.getUploadMetadata", { path: s2 }).then((e3) => {
     t2(null, e3);
@@ -10237,7 +10394,7 @@ const lt = function(e2, t2) {
     t2(e3);
   }), t2.promise;
 }, pt = function({ fileList: e2 }, t2) {
-  if (t2 = t2 || Ie(), !e2 || !Array.isArray(e2))
+  if (t2 = t2 || ve(), !e2 || !Array.isArray(e2))
     return { code: "INVALID_PARAM", message: "fileList必须是非空的数组" };
   for (let t3 of e2)
     if (!t3 || "string" != typeof t3)
@@ -10249,7 +10406,7 @@ const lt = function(e2, t2) {
     t2(e3);
   }), t2.promise;
 }, ft = function({ fileList: e2 }, t2) {
-  t2 = t2 || Ie(), e2 && Array.isArray(e2) || t2(null, { code: "INVALID_PARAM", message: "fileList必须是非空的数组" });
+  t2 = t2 || ve(), e2 && Array.isArray(e2) || t2(null, { code: "INVALID_PARAM", message: "fileList必须是非空的数组" });
   let n2 = [];
   for (let s3 of e2)
     "object" == typeof s3 ? (s3.hasOwnProperty("fileID") && s3.hasOwnProperty("maxAge") || t2(null, { code: "INVALID_PARAM", message: "fileList的元素必须是包含fileID和maxAge的对象" }), n2.push({ fileid: s3.fileID, max_age: s3.maxAge })) : "string" == typeof s3 ? n2.push({ fileid: s3 }) : t2(null, { code: "INVALID_PARAM", message: "fileList的元素必须是字符串" });
@@ -10271,7 +10428,7 @@ const lt = function(e2, t2) {
     return s2.download({ url: r2 });
   t2(await s2.download({ url: r2 }));
 }, mt = function({ name: e2, data: t2, query: n2, parse: s2, search: r2, timeout: i2 }, o2) {
-  const a2 = o2 || Ie();
+  const a2 = o2 || ve();
   let c2;
   try {
     c2 = t2 ? JSON.stringify(t2) : "";
@@ -10300,24 +10457,24 @@ const lt = function(e2, t2) {
     a2(e3);
   }), a2.promise;
 }, yt = { timeout: 15e3, persistence: "session" }, _t = 6e5, wt = {};
-class vt {
+class It {
   constructor(e2) {
     this.config = e2 || this.config, this.authObj = void 0;
   }
   init(e2) {
-    switch (Ce.adapter || (this.requestClient = new Ce.adapter.reqClass({ timeout: e2.timeout || 5e3, timeoutMsg: `请求在${(e2.timeout || 5e3) / 1e3}s内未完成，已中断` })), this.config = { ...yt, ...e2 }, true) {
+    switch (Pe.adapter || (this.requestClient = new Pe.adapter.reqClass({ timeout: e2.timeout || 5e3, timeoutMsg: `请求在${(e2.timeout || 5e3) / 1e3}s内未完成，已中断` })), this.config = { ...yt, ...e2 }, true) {
       case this.config.timeout > _t:
         console.warn("timeout大于可配置上限[10分钟]，已重置为上限数值"), this.config.timeout = _t;
         break;
       case this.config.timeout < 100:
         console.warn("timeout小于可配置下限[100ms]，已重置为下限数值"), this.config.timeout = 100;
     }
-    return new vt(this.config);
+    return new It(this.config);
   }
   auth({ persistence: e2 } = {}) {
     if (this.authObj)
       return this.authObj;
-    const t2 = e2 || Ce.adapter.primaryStorage || yt.persistence;
+    const t2 = e2 || Pe.adapter.primaryStorage || yt.persistence;
     var n2;
     return t2 !== this.config.persistence && (this.config.persistence = t2), function(e3) {
       const { env: t3 } = e3;
@@ -10358,11 +10515,11 @@ class vt {
     return await n2.invoke(t2, this);
   }
   useAdapters(e2) {
-    const { adapter: t2, runtime: n2 } = Pe(e2) || {};
-    t2 && (Ce.adapter = t2), n2 && (Ce.runtime = n2);
+    const { adapter: t2, runtime: n2 } = Ae(e2) || {};
+    t2 && (Pe.adapter = t2), n2 && (Pe.runtime = n2);
   }
 }
-var It = new vt();
+var vt = new It();
 function St(e2, t2, n2) {
   void 0 === n2 && (n2 = {});
   var s2 = /\?/.test(t2), r2 = "";
@@ -10417,11 +10574,11 @@ var Et = { genAdapter: function() {
 }, isMatch: function() {
   return true;
 }, runtime: "uni_app" };
-It.useAdapters(Et);
-const kt = It, Pt = kt.init;
+vt.useAdapters(Et);
+const kt = vt, At = kt.init;
 kt.init = function(e2) {
   e2.env = e2.spaceId;
-  const t2 = Pt.call(this, e2);
+  const t2 = At.call(this, e2);
   t2.config.provider = "tencent", t2.config.spaceId = e2.spaceId;
   const n2 = t2.auth;
   return t2.auth = function(e3) {
@@ -10442,8 +10599,8 @@ kt.init = function(e2) {
     }), t3;
   }, t2.customAuth = t2.auth, t2;
 };
-var Ct = kt;
-async function At(e2, t2) {
+var Pt = kt;
+async function Ct(e2, t2) {
   const n2 = `http://${e2}:${t2}/system/ping`;
   try {
     const e3 = await (s2 = { url: n2, timeout: 500 }, new Promise((e4, t3) => {
@@ -10463,7 +10620,7 @@ async function Ot(e2, t2) {
   let n2;
   for (let s2 = 0; s2 < e2.length; s2++) {
     const r2 = e2[s2];
-    if (await At(r2, t2)) {
+    if (await Ct(r2, t2)) {
       n2 = r2;
       break;
     }
@@ -10588,7 +10745,7 @@ ${r3}
 `, o3 = we(i3).toString(Lt), a3 = `${t3}
 ${e3.timestamp}
 ${o3}
-`, c3 = ve(a3, e3.secretKey).toString(Lt);
+`, c3 = Ie(a3, e3.secretKey).toString(Lt);
     return `${t3} Credential=${e3.secretId}, SignedHeaders=${n3}, Signature=${c3}`;
   }({ path: d2, query: p2, method: r2, headers: h2, timestamp: c2, body: JSON.stringify(n2), secretId: a2.accessKey, secretKey: a2.secretKey, signedHeaders: l2.sort() });
   return { url: `${a2.endpoint}${e2}`, headers: Object.assign({}, h2, { Authorization: f2 }) };
@@ -10606,7 +10763,7 @@ function Mt({ url: e2, data: t2, method: n2 = "POST", headers: s2 = {}, timeout:
   });
 }
 function qt(e2, t2) {
-  const { path: n2, data: s2, method: r2 = "GET" } = e2, { url: i2, headers: o2 } = Dt(n2, { functionName: "", data: s2, method: r2, headers: { "x-alipay-cloud-mode": "oss", "x-data-api-type": "oss", "x-expire-timestamp": Date.now() + 6e4 }, signHeaderKeys: ["x-data-api-type", "x-expire-timestamp"], config: t2 });
+  const { path: n2, data: s2, method: r2 = "GET" } = e2, { url: i2, headers: o2 } = Dt(n2, { functionName: "", data: s2, method: r2, headers: { "x-alipay-cloud-mode": "oss", "x-data-api-type": "oss", "x-expire-timestamp": String(Date.now() + 6e4) }, signHeaderKeys: ["x-data-api-type", "x-expire-timestamp"], config: t2 });
   return Mt({ url: i2, data: s2, method: r2, headers: o2 }).then((e3) => {
     const t3 = e3.data || {};
     if (!t3.success)
@@ -10633,7 +10790,7 @@ class jt {
   signedURL(e2, t2 = {}) {
     const n2 = `/ws/function/${e2}`, s2 = this.config.wsEndpoint.replace(/^ws(s)?:\/\//, ""), r2 = Object.assign({}, t2, { accessKeyId: this.config.accessKey, signatureNonce: Ut(), timestamp: "" + Date.now() }), i2 = [n2, ["accessKeyId", "authorization", "signatureNonce", "timestamp"].sort().map(function(e3) {
       return r2[e3] ? "".concat(e3, "=").concat(r2[e3]) : null;
-    }).filter(Boolean).join("&"), `host:${s2}`].join("\n"), o2 = ["HMAC-SHA256", we(i2).toString(Lt)].join("\n"), a2 = ve(o2, this.config.secretKey).toString(Lt), c2 = Object.keys(r2).map((e3) => `${e3}=${encodeURIComponent(r2[e3])}`).join("&");
+    }).filter(Boolean).join("&"), `host:${s2}`].join("\n"), o2 = ["HMAC-SHA256", we(i2).toString(Lt)].join("\n"), a2 = Ie(o2, this.config.secretKey).toString(Lt), c2 = Object.keys(r2).map((e3) => `${e3}=${encodeURIComponent(r2[e3])}`).join("&");
     return `${this.config.wsEndpoint}${n2}?${c2}&signature=${a2}`;
   }
 }
@@ -10743,7 +10900,7 @@ async function Ht(e2 = {}) {
   await this.__dev__.initLocalNetwork();
   const { localAddress: t2, localPort: n2 } = this.__dev__, s2 = { aliyun: "aliyun", tencent: "tcb", alipay: "alipay", dcloud: "dcloud" }[this.config.provider], r2 = this.config.spaceId, i2 = `http://${t2}:${n2}/system/check-function`, o2 = `http://${t2}:${n2}/cloudfunctions/${e2.name}`;
   return new Promise((t3, n3) => {
-    ne.request({ method: "POST", url: i2, data: { name: e2.name, platform: C, provider: s2, spaceId: r2 }, timeout: 3e3, success(e3) {
+    ne.request({ method: "POST", url: i2, data: { name: e2.name, platform: P, provider: s2, spaceId: r2 }, timeout: 3e3, success(e3) {
       t3(e3);
     }, fail() {
       t3({ data: { code: "NETWORK_ERROR", message: "连接本地调试服务失败，请检查客户端是否和主机在同一局域网下，自动切换为已部署的云函数。" } });
@@ -10777,7 +10934,7 @@ async function Ht(e2 = {}) {
     }
     return new Promise((t4, n4) => {
       const r3 = Wt.call(this, { data: e2.data });
-      ne.request({ method: "POST", url: o2, data: { provider: s2, platform: C, param: r3 }, timeout: e2.timeout, success: ({ statusCode: e3, data: s3 } = {}) => !e3 || e3 >= 400 ? n4(new te({ code: s3.code || "SYS_ERR", message: s3.message || "request:fail" })) : t4({ result: s3 }), fail(e3) {
+      ne.request({ method: "POST", url: o2, data: { provider: s2, platform: P, param: r3 }, timeout: e2.timeout, success: ({ statusCode: e3, data: s3 } = {}) => !e3 || e3 >= 400 ? n4(new te({ code: s3.code || "SYS_ERR", message: s3.message || "request:fail" })) : t4({ result: s3 }), fail(e3) {
         n4(new te({ code: e3.code || e3.errCode || "SYS_ERR", message: e3.message || e3.errMsg || "request:fail" }));
       } });
     });
@@ -10789,25 +10946,24 @@ function Gt(e2, t2, n2) {
   return e2.replace(new RegExp((s2 = t2) && Vt.test(s2) ? s2.replace(zt, "\\$&") : s2, "g"), n2);
   var s2;
 }
-const Yt = { NONE: "none", REQUEST: "request", RESPONSE: "response", BOTH: "both" }, Qt = "_globalUniCloudStatus", Xt = "_globalUniCloudSecureNetworkCache__{spaceId}";
-const Un = "uni-secure-network", Dn = { SYSTEM_ERROR: { code: 2e4, message: "System error" }, APP_INFO_INVALID: { code: 20101, message: "Invalid client" }, GET_ENCRYPT_KEY_FAILED: { code: 20102, message: "Get encrypt key failed" } };
-function qn(e2) {
+const Yt = { NONE: "none", REQUEST: "request", RESPONSE: "response", BOTH: "both" }, Qt = "_globalUniCloudStatus", Xt = "_globalUniCloudSecureNetworkCache__{spaceId}", Zt = "uni-secure-network", en$2 = { SYSTEM_ERROR: { code: 2e4, message: "System error" }, APP_INFO_INVALID: { code: 20101, message: "Invalid client" }, GET_ENCRYPT_KEY_FAILED: { code: 20102, message: "Get encrypt key failed" } };
+function nn(e2) {
   const { errSubject: t2, subject: n2, errCode: s2, errMsg: r2, code: i2, message: o2, cause: a2 } = e2 || {};
-  return new te({ subject: t2 || n2 || Un, code: s2 || i2 || Dn.SYSTEM_ERROR.code, message: r2 || o2, cause: a2 });
+  return new te({ subject: t2 || n2 || Zt, code: s2 || i2 || en$2.SYSTEM_ERROR.code, message: r2 || o2, cause: a2 });
 }
 let Kn;
 function Hn({ secretType: e2 } = {}) {
   return e2 === Yt.REQUEST || e2 === Yt.RESPONSE || e2 === Yt.BOTH;
 }
 function Jn({ name: e2, data: t2 = {} } = {}) {
-  return "app" === C;
+  return "app" === P;
 }
 function zn({ provider: e2, spaceId: t2, functionName: n2 } = {}) {
   const { appId: s2, uniPlatform: r2, osName: i2 } = ce();
   let o2 = r2;
   "app" === r2 && (o2 = i2);
   const a2 = function({ provider: e3, spaceId: t3 } = {}) {
-    const n3 = P;
+    const n3 = A;
     if (!n3)
       return {};
     e3 = /* @__PURE__ */ function(e4) {
@@ -10833,7 +10989,7 @@ function zn({ provider: e2, spaceId: t2, functionName: n2 } = {}) {
     return false;
   if ((c2[h2] || []).find((e3 = {}) => e3.appId === s2 && (e3.platform || "").toLowerCase() === o2.toLowerCase()))
     return true;
-  throw console.error(`此应用[appId: ${s2}, platform: ${o2}]不在云端配置的允许访问的应用列表内，参考：https://uniapp.dcloud.net.cn/uniCloud/secure-network.html#verify-client`), qn(Dn.APP_INFO_INVALID);
+  throw console.error(`此应用[appId: ${s2}, platform: ${o2}]不在云端配置的允许访问的应用列表内，参考：https://uniapp.dcloud.net.cn/uniCloud/secure-network.html#verify-client`), nn(en$2.APP_INFO_INVALID);
 }
 function Vn({ functionName: e2, result: t2, logPvd: n2 }) {
   if (this.__dev__.debugLog && t2 && t2.requestId) {
@@ -10876,12 +11032,12 @@ function Gn(e2) {
       a2 = new Kn({ secretType: t3.secretType, uniCloudIns: e2 }).wrapVerifyClientCallFunction(n2.bind(e2))(t3);
     } else
       a2 = o2(t3);
-    return Object.defineProperty(a2, "result", { get: () => (console.warn("当前返回结果为Promise类型，不可直接访问其result属性，详情请参考：https://uniapp.dcloud.net.cn/uniCloud/faq?id=promise"), {}) }), a2.then((e3) => ("undefined" != typeof UTSJSONObject && (e3.result = new UTSJSONObject(e3.result)), e3));
+    return Object.defineProperty(a2, "result", { get: () => (console.warn("当前返回结果为Promise类型，不可直接访问其result属性，详情请参考：https://uniapp.dcloud.net.cn/uniCloud/faq?id=promise"), {}) }), a2.then((e3) => e3);
   };
 }
 Kn = class {
   constructor() {
-    throw qn({ message: `Platform ${C} is not enabled, please check whether secure network module is enabled in your manifest.json` });
+    throw nn({ message: `Platform ${P} is not enabled, please check whether secure network module is enabled in your manifest.json` });
   }
 };
 const Yn = Symbol("CLIENT_DB_INTERNAL");
@@ -11132,55 +11288,55 @@ class cs extends os {
     });
   }
 }
-const us = "token无效，跳转登录页面", hs = "token过期，跳转登录页面", ls = { TOKEN_INVALID_TOKEN_EXPIRED: hs, TOKEN_INVALID_INVALID_CLIENTID: us, TOKEN_INVALID: us, TOKEN_INVALID_WRONG_TOKEN: us, TOKEN_INVALID_ANONYMOUS_USER: us }, ds = { "uni-id-token-expired": hs, "uni-id-check-token-failed": us, "uni-id-token-not-exist": us, "uni-id-check-device-feature-failed": us };
-function ps(e2, t2) {
+const us = "token无效，跳转登录页面", hs = "token过期，跳转登录页面", ls = { TOKEN_INVALID_TOKEN_EXPIRED: hs, TOKEN_INVALID_INVALID_CLIENTID: us, TOKEN_INVALID: us, TOKEN_INVALID_WRONG_TOKEN: us, TOKEN_INVALID_ANONYMOUS_USER: us }, ds = { "uni-id-token-expired": hs, "uni-id-check-token-failed": us, "uni-id-token-not-exist": us, "uni-id-check-device-feature-failed": us }, ps = { ...ls, ...ds, default: "用户未登录或登录状态过期，自动跳转登录页面" };
+function fs(e2, t2) {
   let n2 = "";
   return n2 = e2 ? `${e2}/${t2}` : t2, n2.replace(/^\//, "");
 }
-function fs(e2 = [], t2 = "") {
+function gs(e2 = [], t2 = "") {
   const n2 = [], s2 = [];
   return e2.forEach((e3) => {
-    true === e3.needLogin ? n2.push(ps(t2, e3.path)) : false === e3.needLogin && s2.push(ps(t2, e3.path));
+    true === e3.needLogin ? n2.push(fs(t2, e3.path)) : false === e3.needLogin && s2.push(fs(t2, e3.path));
   }), { needLoginPage: n2, notNeedLoginPage: s2 };
 }
-function gs(e2) {
+function ms(e2) {
   return e2.split("?")[0].replace(/^\//, "");
 }
-function ms() {
+function ys() {
   return function(e2) {
-    let t2 = e2 && e2.$page && e2.$page.fullPath || "";
-    return t2 ? ("/" !== t2.charAt(0) && (t2 = "/" + t2), t2) : t2;
+    let t2 = e2 && e2.$page && e2.$page.fullPath;
+    return t2 ? ("/" !== t2.charAt(0) && (t2 = "/" + t2), t2) : "";
   }(function() {
     const e2 = getCurrentPages();
     return e2[e2.length - 1];
   }());
 }
-function ys() {
-  return gs(ms());
+function _s() {
+  return ms(ys());
 }
-function _s(e2 = "", t2 = {}) {
+function ws(e2 = "", t2 = {}) {
   if (!e2)
     return false;
   if (!(t2 && t2.list && t2.list.length))
     return false;
-  const n2 = t2.list, s2 = gs(e2);
+  const n2 = t2.list, s2 = ms(e2);
   return n2.some((e3) => e3.pagePath === s2);
 }
-const ws = !!e.uniIdRouter;
-const { loginPage: vs, routerNeedLogin: Is, resToLogin: Ss, needLoginPage: Ts, notNeedLoginPage: bs, loginPageInTabBar: Es } = function({ pages: t2 = [], subPackages: n2 = [], uniIdRouter: s2 = {}, tabBar: r2 = {} } = e) {
-  const { loginPage: i2, needLogin: o2 = [], resToLogin: a2 = true } = s2, { needLoginPage: c2, notNeedLoginPage: u2 } = fs(t2), { needLoginPage: h2, notNeedLoginPage: l2 } = function(e2 = []) {
+const Is = !!e.uniIdRouter;
+const { loginPage: vs, routerNeedLogin: Ss, resToLogin: Ts, needLoginPage: bs, notNeedLoginPage: Es, loginPageInTabBar: ks$1 } = function({ pages: t2 = [], subPackages: n2 = [], uniIdRouter: s2 = {}, tabBar: r2 = {} } = e) {
+  const { loginPage: i2, needLogin: o2 = [], resToLogin: a2 = true } = s2, { needLoginPage: c2, notNeedLoginPage: u2 } = gs(t2), { needLoginPage: h2, notNeedLoginPage: l2 } = function(e2 = []) {
     const t3 = [], n3 = [];
     return e2.forEach((e3) => {
-      const { root: s3, pages: r3 = [] } = e3, { needLoginPage: i3, notNeedLoginPage: o3 } = fs(r3, s3);
+      const { root: s3, pages: r3 = [] } = e3, { needLoginPage: i3, notNeedLoginPage: o3 } = gs(r3, s3);
       t3.push(...i3), n3.push(...o3);
     }), { needLoginPage: t3, notNeedLoginPage: n3 };
   }(n2);
-  return { loginPage: i2, routerNeedLogin: o2, resToLogin: a2, needLoginPage: [...c2, ...h2], notNeedLoginPage: [...u2, ...l2], loginPageInTabBar: _s(i2, r2) };
+  return { loginPage: i2, routerNeedLogin: o2, resToLogin: a2, needLoginPage: [...c2, ...h2], notNeedLoginPage: [...u2, ...l2], loginPageInTabBar: ws(i2, r2) };
 }();
-if (Ts.indexOf(vs) > -1)
+if (bs.indexOf(vs) > -1)
   throw new Error(`Login page [${vs}] should not be "needLogin", please check your pages.json`);
-function ks$1(e2) {
-  const t2 = ys();
+function As(e2) {
+  const t2 = _s();
   if ("/" === e2.charAt(0))
     return e2;
   const [n2, s2] = e2.split("?"), r2 = n2.replace(/^\//, "").split("/"), i2 = t2.split("/");
@@ -11192,39 +11348,39 @@ function ks$1(e2) {
   return "" === i2[0] && i2.shift(), "/" + i2.join("/") + (s2 ? "?" + s2 : "");
 }
 function Ps(e2) {
-  const t2 = gs(ks$1(e2));
-  return !(bs.indexOf(t2) > -1) && (Ts.indexOf(t2) > -1 || Is.some((t3) => function(e3, t4) {
+  const t2 = ms(As(e2));
+  return !(Es.indexOf(t2) > -1) && (bs.indexOf(t2) > -1 || Ss.some((t3) => function(e3, t4) {
     return new RegExp(t4).test(e3);
   }(e2, t3)));
 }
 function Cs({ redirect: e2 }) {
-  const t2 = gs(e2), n2 = gs(vs);
-  return ys() !== n2 && t2 !== n2;
+  const t2 = ms(e2), n2 = ms(vs);
+  return _s() !== n2 && t2 !== n2;
 }
-function As({ api: e2, redirect: t2 } = {}) {
+function Os({ api: e2, redirect: t2 } = {}) {
   if (!t2 || !Cs({ redirect: t2 }))
     return;
   const n2 = function(e3, t3) {
     return "/" !== e3.charAt(0) && (e3 = "/" + e3), t3 ? e3.indexOf("?") > -1 ? e3 + `&uniIdRedirectUrl=${encodeURIComponent(t3)}` : e3 + `?uniIdRedirectUrl=${encodeURIComponent(t3)}` : e3;
   }(vs, t2);
-  Es ? "navigateTo" !== e2 && "redirectTo" !== e2 || (e2 = "switchTab") : "switchTab" === e2 && (e2 = "navigateTo");
+  ks$1 ? "navigateTo" !== e2 && "redirectTo" !== e2 || (e2 = "switchTab") : "switchTab" === e2 && (e2 = "navigateTo");
   const s2 = { navigateTo: index.navigateTo, redirectTo: index.redirectTo, switchTab: index.switchTab, reLaunch: index.reLaunch };
   setTimeout(() => {
     s2[e2]({ url: n2 });
   }, 0);
 }
-function Os({ url: e2 } = {}) {
+function xs({ url: e2 } = {}) {
   const t2 = { abortLoginPageJump: false, autoToLoginPage: false }, n2 = function() {
     const { token: e3, tokenExpired: t3 } = re();
     let n3;
     if (e3) {
       if (t3 < Date.now()) {
         const e4 = "uni-id-token-expired";
-        n3 = { errCode: e4, errMsg: ds[e4] };
+        n3 = { errCode: e4, errMsg: ps[e4] };
       }
     } else {
       const e4 = "uni-id-check-token-failed";
-      n3 = { errCode: e4, errMsg: ds[e4] };
+      n3 = { errCode: e4, errMsg: ps[e4] };
     }
     return n3;
   }();
@@ -11238,21 +11394,21 @@ function Os({ url: e2 } = {}) {
   }
   return t2;
 }
-function xs() {
+function Ns() {
   !function() {
-    const e3 = ms(), { abortLoginPageJump: t2, autoToLoginPage: n2 } = Os({ url: e3 });
-    t2 || n2 && As({ api: "redirectTo", redirect: e3 });
+    const e3 = ys(), { abortLoginPageJump: t2, autoToLoginPage: n2 } = xs({ url: e3 });
+    t2 || n2 && Os({ api: "redirectTo", redirect: e3 });
   }();
   const e2 = ["navigateTo", "redirectTo", "reLaunch", "switchTab"];
   for (let t2 = 0; t2 < e2.length; t2++) {
     const n2 = e2[t2];
     index.addInterceptor(n2, { invoke(e3) {
-      const { abortLoginPageJump: t3, autoToLoginPage: s2 } = Os({ url: e3.url });
-      return t3 ? e3 : s2 ? (As({ api: n2, redirect: ks$1(e3.url) }), false) : e3;
+      const { abortLoginPageJump: t3, autoToLoginPage: s2 } = xs({ url: e3.url });
+      return t3 ? e3 : s2 ? (Os({ api: n2, redirect: As(e3.url) }), false) : e3;
     } });
   }
 }
-function Ns() {
+function Rs() {
   this.onResponse((e2) => {
     const { type: t2, content: n2 } = e2;
     let s2 = false;
@@ -11262,7 +11418,7 @@ function Ns() {
           if ("object" != typeof e3)
             return false;
           const { errCode: t3 } = e3 || {};
-          return t3 in ds;
+          return t3 in ps;
         }(n2);
         break;
       case "clientdb":
@@ -11276,14 +11432,14 @@ function Ns() {
     s2 && function(e3 = {}) {
       const t3 = z(H.NEED_LOGIN);
       Z().then(() => {
-        const n3 = ms();
+        const n3 = ys();
         if (n3 && Cs({ redirect: n3 }))
-          return t3.length > 0 ? Y(H.NEED_LOGIN, Object.assign({ uniIdRedirectUrl: n3 }, e3)) : void (vs && As({ api: "navigateTo", redirect: n3 }));
+          return t3.length > 0 ? Y(H.NEED_LOGIN, Object.assign({ uniIdRedirectUrl: n3 }, e3)) : void (vs && Os({ api: "navigateTo", redirect: n3 }));
       });
     }(n2);
   });
 }
-function Rs(e2) {
+function Ls(e2) {
   !function(e3) {
     e3.onResponse = function(e4) {
       V(H.RESPONSE, e4);
@@ -11295,9 +11451,9 @@ function Rs(e2) {
       V(H.NEED_LOGIN, e4);
     }, e3.offNeedLogin = function(e4) {
       G(H.NEED_LOGIN, e4);
-    }, ws && (U(Qt).needLoginInit || (U(Qt).needLoginInit = true, Z().then(() => {
-      xs.call(e3);
-    }), Ss && Ns.call(e3)));
+    }, Is && (U(Qt).needLoginInit || (U(Qt).needLoginInit = true, Z().then(() => {
+      Ns.call(e3);
+    }), Ts && Rs.call(e3)));
   }(e2), function(e3) {
     e3.onRefreshToken = function(e4) {
       V(H.REFRESH_TOKEN, e4);
@@ -11306,15 +11462,15 @@ function Rs(e2) {
     };
   }(e2);
 }
-let Ls;
-const Us = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=", Ds = /^(?:[A-Za-z\d+/]{4})*?(?:[A-Za-z\d+/]{2}(?:==)?|[A-Za-z\d+/]{3}=?)?$/;
-function Ms() {
+let Us;
+const Ds = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=", Ms = /^(?:[A-Za-z\d+/]{4})*?(?:[A-Za-z\d+/]{2}(?:==)?|[A-Za-z\d+/]{3}=?)?$/;
+function qs() {
   const e2 = re().token || "", t2 = e2.split(".");
   if (!e2 || 3 !== t2.length)
     return { uid: null, role: [], permission: [], tokenExpired: 0 };
   let n2;
   try {
-    n2 = JSON.parse((s2 = t2[1], decodeURIComponent(Ls(s2).split("").map(function(e3) {
+    n2 = JSON.parse((s2 = t2[1], decodeURIComponent(Us(s2).split("").map(function(e3) {
       return "%" + ("00" + e3.charCodeAt(0).toString(16)).slice(-2);
     }).join(""))));
   } catch (e3) {
@@ -11323,16 +11479,16 @@ function Ms() {
   var s2;
   return n2.tokenExpired = 1e3 * n2.exp, delete n2.exp, delete n2.iat, n2;
 }
-Ls = "function" != typeof atob ? function(e2) {
-  if (e2 = String(e2).replace(/[\t\n\f\r ]+/g, ""), !Ds.test(e2))
+Us = "function" != typeof atob ? function(e2) {
+  if (e2 = String(e2).replace(/[\t\n\f\r ]+/g, ""), !Ms.test(e2))
     throw new Error("Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.");
   var t2;
   e2 += "==".slice(2 - (3 & e2.length));
   for (var n2, s2, r2 = "", i2 = 0; i2 < e2.length; )
-    t2 = Us.indexOf(e2.charAt(i2++)) << 18 | Us.indexOf(e2.charAt(i2++)) << 12 | (n2 = Us.indexOf(e2.charAt(i2++))) << 6 | (s2 = Us.indexOf(e2.charAt(i2++))), r2 += 64 === n2 ? String.fromCharCode(t2 >> 16 & 255) : 64 === s2 ? String.fromCharCode(t2 >> 16 & 255, t2 >> 8 & 255) : String.fromCharCode(t2 >> 16 & 255, t2 >> 8 & 255, 255 & t2);
+    t2 = Ds.indexOf(e2.charAt(i2++)) << 18 | Ds.indexOf(e2.charAt(i2++)) << 12 | (n2 = Ds.indexOf(e2.charAt(i2++))) << 6 | (s2 = Ds.indexOf(e2.charAt(i2++))), r2 += 64 === n2 ? String.fromCharCode(t2 >> 16 & 255) : 64 === s2 ? String.fromCharCode(t2 >> 16 & 255, t2 >> 8 & 255) : String.fromCharCode(t2 >> 16 & 255, t2 >> 8 & 255, 255 & t2);
   return r2;
 } : atob;
-var qs = n(function(e2, t2) {
+var Fs = n(function(e2, t2) {
   Object.defineProperty(t2, "__esModule", { value: true });
   const n2 = "chooseAndUploadFile:ok", s2 = "chooseAndUploadFile:fail";
   function r2(e3, t3) {
@@ -11407,9 +11563,9 @@ var qs = n(function(e2, t2) {
       }(t3), t3);
     };
   };
-}), Fs = t(qs);
-const Ks = { auto: "auto", onready: "onready", manual: "manual" };
-function js(e2) {
+}), Ks = t(Fs);
+const js = { auto: "auto", onready: "onready", manual: "manual" };
+function $s(e2) {
   return { props: { localdata: { type: Array, default: () => [] }, options: { type: [Object, Array], default: () => ({}) }, spaceInfo: { type: Object, default: () => ({}) }, collection: { type: [String, Array], default: "" }, action: { type: String, default: "" }, field: { type: String, default: "" }, orderby: { type: String, default: "" }, where: { type: [String, Object], default: "" }, pageData: { type: String, default: "add" }, pageCurrent: { type: Number, default: 1 }, pageSize: { type: Number, default: 20 }, getcount: { type: [Boolean, String], default: false }, gettree: { type: [Boolean, String], default: false }, gettreepath: { type: [Boolean, String], default: false }, startwith: { type: String, default: "" }, limitlevel: { type: Number, default: 10 }, groupby: { type: String, default: "" }, groupField: { type: String, default: "" }, distinct: { type: [Boolean, String], default: false }, foreignKey: { type: String, default: "" }, loadtime: { type: String, default: "auto" }, manual: { type: Boolean, default: false } }, data: () => ({ mixinDatacomLoading: false, mixinDatacomHasMore: false, mixinDatacomResData: [], mixinDatacomErrorMessage: "", mixinDatacomPage: {}, mixinDatacomError: null }), created() {
     this.mixinDatacomPage = { current: this.pageCurrent, size: this.pageSize, count: 0 }, this.$watch(() => {
       var e3 = [];
@@ -11417,7 +11573,7 @@ function js(e2) {
         e3.push(this[t2]);
       }), e3;
     }, (e3, t2) => {
-      if (this.loadtime === Ks.manual)
+      if (this.loadtime === js.manual)
         return;
       let n2 = false;
       const s2 = [];
@@ -11460,7 +11616,7 @@ function js(e2) {
     return f2 && (m2.getTree = y2), g2 && (m2.getTreePath = y2), n2 = n2.skip(d2 * (l2 - 1)).limit(d2).get(m2), n2;
   } } };
 }
-function $s(e2) {
+function Bs(e2) {
   return function(t2, n2 = {}) {
     n2 = function(e3, t3 = {}) {
       return e3.customUI = t3.customUI || e3.customUI, e3.parseSystemError = t3.parseSystemError || e3.parseSystemError, Object.assign(e3.loadingOptions, t3.loadingOptions), Object.assign(e3.errorOptions, t3.errorOptions), "object" == typeof t3.secretMethods && (e3.secretMethods = t3.secretMethods), e3;
@@ -11535,11 +11691,11 @@ function $s(e2) {
     } });
   };
 }
-function Bs(e2) {
+function Ws(e2) {
   return U(Xt.replace("{spaceId}", e2.config.spaceId));
 }
-async function Ws({ openid: e2, callLoginByWeixin: t2 = false } = {}) {
-  const n2 = Bs(this);
+async function Hs({ openid: e2, callLoginByWeixin: t2 = false } = {}) {
+  const n2 = Ws(this);
   if (e2 && t2)
     throw new Error("[SecureNetwork] openid and callLoginByWeixin cannot be passed at the same time");
   if (e2)
@@ -11553,40 +11709,40 @@ async function Ws({ openid: e2, callLoginByWeixin: t2 = false } = {}) {
   }), r2 = this.importObject("uni-id-co", { customUI: true });
   return await r2.secureNetworkHandshakeByWeixin({ code: s2, callLoginByWeixin: t2 }), n2.mpWeixinCode = s2, { code: s2 };
 }
-async function Hs(e2) {
-  const t2 = Bs(this);
-  return t2.initPromise || (t2.initPromise = Ws.call(this, e2).then((e3) => e3).catch((e3) => {
+async function Js(e2) {
+  const t2 = Ws(this);
+  return t2.initPromise || (t2.initPromise = Hs.call(this, e2).then((e3) => e3).catch((e3) => {
     throw delete t2.initPromise, e3;
   })), t2.initPromise;
 }
-function Js(e2) {
+function zs(e2) {
   return function({ openid: t2, callLoginByWeixin: n2 = false } = {}) {
-    return Hs.call(e2, { openid: t2, callLoginByWeixin: n2 });
+    return Js.call(e2, { openid: t2, callLoginByWeixin: n2 });
   };
 }
-function zs(e2) {
+function Vs(e2) {
   !function(e3) {
     he = e3;
   }(e2);
 }
-function Vs(e2) {
-  const t2 = { getSystemInfo: index.getSystemInfo, getPushClientId: index.getPushClientId };
-  return function(n2) {
-    return new Promise((s2, r2) => {
-      t2[e2]({ ...n2, success(e3) {
-        s2(e3);
-      }, fail(e3) {
+function Gs(e2) {
+  const t2 = wx$1.canIUse("getAppBaseInfo"), n2 = { getAppBaseInfo: t2 ? index.getAppBaseInfo : index.getSystemInfo, getPushClientId: index.getPushClientId };
+  return function(s2) {
+    return new Promise((r2, i2) => {
+      t2 && "getAppBaseInfo" === e2 ? r2(n2[e2]()) : n2[e2]({ ...s2, success(e3) {
         r2(e3);
+      }, fail(e3) {
+        i2(e3);
       } });
     });
   };
 }
-class Gs extends S {
+class Ys extends S {
   constructor() {
     super(), this._uniPushMessageCallback = this._receivePushMessage.bind(this), this._currentMessageId = -1, this._payloadQueue = [];
   }
   init() {
-    return Promise.all([Vs("getSystemInfo")(), Vs("getPushClientId")()]).then(([{ appId: e2 } = {}, { cid: t2 } = {}] = []) => {
+    return Promise.all([Gs("getAppBaseInfo")(), Gs("getPushClientId")()]).then(([{ appId: e2 } = {}, { cid: t2 } = {}] = []) => {
       if (!e2)
         throw new Error("Invalid appId, please check the manifest.json file");
       if (!t2)
@@ -11642,7 +11798,7 @@ class Gs extends S {
     this._destroy(), this.emit("close");
   }
 }
-async function Ys(e2) {
+async function Qs(e2) {
   const t2 = e2.__dev__;
   if (!t2.debugInfo)
     return;
@@ -11651,12 +11807,12 @@ async function Ys(e2) {
     return t2.localAddress = r2, void (t2.localPort = s2);
   const i2 = console["warn"];
   let o2 = "";
-  if ("remote" === t2.debugInfo.initialLaunchType ? (t2.debugInfo.forceRemote = true, o2 = "当前客户端和HBuilderX不在同一局域网下（或其他网络原因无法连接HBuilderX），uniCloud本地调试服务不对当前客户端生效。\n- 如果不使用uniCloud本地调试服务，请直接忽略此信息。\n- 如需使用uniCloud本地调试服务，请将客户端与主机连接到同一局域网下并重新运行到客户端。") : o2 = "无法连接uniCloud本地调试服务，请检查当前客户端是否与主机在同一局域网下。\n- 如需使用uniCloud本地调试服务，请将客户端与主机连接到同一局域网下并重新运行到客户端。", o2 += "\n- 如果在HBuilderX开启的状态下切换过网络环境，请重启HBuilderX后再试\n- 检查系统防火墙是否拦截了HBuilderX自带的nodejs\n- 检查是否错误的使用拦截器修改uni.request方法的参数", 0 === C.indexOf("mp-") && (o2 += "\n- 小程序中如何使用uniCloud，请参考：https://uniapp.dcloud.net.cn/uniCloud/publish.html#useinmp"), !t2.debugInfo.forceRemote)
+  if ("remote" === t2.debugInfo.initialLaunchType ? (t2.debugInfo.forceRemote = true, o2 = "当前客户端和HBuilderX不在同一局域网下（或其他网络原因无法连接HBuilderX），uniCloud本地调试服务不对当前客户端生效。\n- 如果不使用uniCloud本地调试服务，请直接忽略此信息。\n- 如需使用uniCloud本地调试服务，请将客户端与主机连接到同一局域网下并重新运行到客户端。") : o2 = "无法连接uniCloud本地调试服务，请检查当前客户端是否与主机在同一局域网下。\n- 如需使用uniCloud本地调试服务，请将客户端与主机连接到同一局域网下并重新运行到客户端。", o2 += "\n- 如果在HBuilderX开启的状态下切换过网络环境，请重启HBuilderX后再试\n- 检查系统防火墙是否拦截了HBuilderX自带的nodejs\n- 检查是否错误的使用拦截器修改uni.request方法的参数", 0 === P.indexOf("mp-") && (o2 += "\n- 小程序中如何使用uniCloud，请参考：https://uniapp.dcloud.net.cn/uniCloud/publish.html#useinmp"), !t2.debugInfo.forceRemote)
     throw new Error(o2);
   i2(o2);
 }
-function Qs(e2) {
-  e2._initPromiseHub || (e2._initPromiseHub = new I({ createPromise: function() {
+function Xs(e2) {
+  e2._initPromiseHub || (e2._initPromiseHub = new v({ createPromise: function() {
     let t2 = Promise.resolve();
     var n2;
     n2 = 1, t2 = new Promise((e3) => {
@@ -11668,25 +11824,25 @@ function Qs(e2) {
     return t2.then(() => s2.getLoginState()).then((e3) => e3 ? Promise.resolve() : s2.signInAnonymously());
   } }));
 }
-const Xs = { tcb: Ct, tencent: Ct, aliyun: fe, private: Rt, dcloud: Rt, alipay: Bt };
-let Zs = new class {
+const Zs = { tcb: Pt, tencent: Pt, aliyun: fe, private: Rt, dcloud: Rt, alipay: Bt };
+let er = new class {
   init(e2) {
     let t2 = {};
-    const n2 = Xs[e2.provider];
+    const n2 = Zs[e2.provider];
     if (!n2)
       throw new Error("未提供正确的provider参数");
     t2 = n2.init(e2), function(e3) {
       const t3 = {};
-      e3.__dev__ = t3, t3.debugLog = "mp-harmony" === C;
-      const n3 = A;
+      e3.__dev__ = t3, t3.debugLog = "mp-harmony" === P;
+      const n3 = C;
       n3 && !n3.code && (t3.debugInfo = n3);
-      const s2 = new I({ createPromise: function() {
-        return Ys(e3);
+      const s2 = new v({ createPromise: function() {
+        return Qs(e3);
       } });
       t3.initLocalNetwork = function() {
         return s2.exec();
       };
-    }(t2), Qs(t2), Gn(t2), function(e3) {
+    }(t2), Xs(t2), Gn(t2), function(e3) {
       const t3 = e3.uploadFile;
       e3.uploadFile = function(e4) {
         return t3.call(this, e4);
@@ -11708,9 +11864,9 @@ let Zs = new class {
         return this._databaseForJQL = n3, n3;
       };
     }(t2), function(e3) {
-      e3.getCurrentUserInfo = Ms, e3.chooseAndUploadFile = Fs.initChooseAndUploadFile(e3), Object.assign(e3, { get mixinDatacom() {
-        return js(e3);
-      } }), e3.SSEChannel = Gs, e3.initSecureNetworkByWeixin = Js(e3), e3.setCustomClientInfo = zs, e3.importObject = $s(e3);
+      e3.getCurrentUserInfo = qs, e3.chooseAndUploadFile = Ks.initChooseAndUploadFile(e3), Object.assign(e3, { get mixinDatacom() {
+        return $s(e3);
+      } }), e3.SSEChannel = Ys, e3.initSecureNetworkByWeixin = zs(e3), e3.setCustomClientInfo = Vs, e3.importObject = Bs(e3);
     }(t2);
     return ["callFunction", "uploadFile", "deleteFile", "getTempFileURL", "downloadFile", "chooseAndUploadFile"].forEach((e3) => {
       if (!t2[e3])
@@ -11744,22 +11900,24 @@ let Zs = new class {
   const e2 = O;
   let t2 = {};
   if (e2 && 1 === e2.length)
-    t2 = e2[0], Zs = Zs.init(t2), Zs._isDefault = true;
+    t2 = e2[0], er = er.init(t2), er._isDefault = true;
   else {
-    const t3 = ["auth", "callFunction", "uploadFile", "deleteFile", "getTempFileURL", "downloadFile", "database", "getCurrentUSerInfo", "importObject"];
-    let n2;
-    n2 = e2 && e2.length > 0 ? "应用有多个服务空间，请通过uniCloud.init方法指定要使用的服务空间" : "应用未关联服务空间，请在uniCloud目录右键关联服务空间", t3.forEach((e3) => {
-      Zs[e3] = function() {
-        return console.error(n2), Promise.reject(new te({ code: "SYS_ERR", message: n2 }));
+    const t3 = ["auth", "callFunction", "uploadFile", "deleteFile", "getTempFileURL", "downloadFile"], n2 = ["database", "getCurrentUserInfo", "importObject"];
+    let s2;
+    s2 = e2 && e2.length > 0 ? "应用有多个服务空间，请通过uniCloud.init方法指定要使用的服务空间" : "应用未关联服务空间，请在uniCloud目录右键关联服务空间", [...t3, ...n2].forEach((e3) => {
+      er[e3] = function() {
+        if (console.error(s2), -1 === n2.indexOf(e3))
+          return Promise.reject(new te({ code: "SYS_ERR", message: s2 }));
+        console.error(s2);
       };
     });
   }
-  if (Object.assign(Zs, { get mixinDatacom() {
-    return js(Zs);
-  } }), Rs(Zs), Zs.addInterceptor = F, Zs.removeInterceptor = K, Zs.interceptObject = B, "web" === C)
+  if (Object.assign(er, { get mixinDatacom() {
+    return $s(er);
+  } }), Ls(er), er.addInterceptor = F, er.removeInterceptor = K, er.interceptObject = B, "web" === P)
     ;
 })();
-var er = Zs;
+var tr = er;
 const popup = {
   data() {
     return {};
@@ -12357,7 +12515,6 @@ exports.createAnimation = createAnimation;
 exports.createSSRApp = createSSRApp;
 exports.dateCompare = dateCompare;
 exports.e = e$1;
-exports.er = er;
 exports.f = f$1;
 exports.fixIosDateFormat = fixIosDateFormat;
 exports.fontData = fontData;
@@ -12379,6 +12536,7 @@ exports.resolveComponent = resolveComponent;
 exports.s = s$1;
 exports.sr = sr;
 exports.t = t$1;
+exports.tr = tr;
 exports.unref = unref;
 exports.watch = watch;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/common/vendor.js.map
