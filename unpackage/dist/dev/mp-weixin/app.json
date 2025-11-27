@@ -2,11 +2,70 @@
   "pages": [
     "pages/index/index"
   ],
+  "subPackages": [
+    {
+      "root": "pageSub/KingdomCore",
+      "pages": [
+        "Kingdom-core"
+      ]
+    },
+    {
+      "root": "pageSub/DailyTools",
+      "pages": [
+        "Calculator/Calculator",
+        "UnitConverter/Unit-converter",
+        "QrcodeGenerator/Qrcode-generator",
+        "CurrencyExchange/Currency-exchange",
+        "RelativeCalculator/Relative-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/FinanceTools",
+      "pages": [
+        "MortgageCalculator/Mortgage-calculator",
+        "CarCalculator/Car-calculator",
+        "PensionCalculator/Pension-calculator"
+      ]
+    },
+    {
+      "root": "pageSub/LifeTools",
+      "pages": [
+        "BMI/BMI",
+        "PregnancyCalculator/Pregnancy-calculator",
+        "Habit/Habit"
+      ]
+    },
+    {
+      "root": "pageSub/WorkTools",
+      "pages": [
+        "IndividualCalculator/Individual-calculator",
+        "RetirementAge/Retirement-age",
+        "SocialSecurityPeriod/Social-security-period"
+      ]
+    },
+    {
+      "root": "pageSub/DataTools",
+      "pages": [
+        "TextDeduplication/Text-deduplication"
+      ]
+    },
+    {
+      "root": "pageSub/TimeTools",
+      "pages": [
+        "DateCalculation/Date-calculation",
+        "TimezoneConverter/TimezoneConverter",
+        "Countdown/Countdown"
+      ]
+    }
+  ],
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "uni-app",
     "navigationBarBackgroundColor": "#F8F8F8",
     "backgroundColor": "#F8F8F8"
   },
+  "requiredBackgroundModes": [
+    "audio"
+  ],
   "usingComponents": {}
 }

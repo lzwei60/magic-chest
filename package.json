@@ -1,0 +1,49 @@
+{
+  "name": "magic-chest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"No tests specified\"",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lzwei60/magic-chest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lzwei60/magic-chest/issues"
+  },
+  "type": "module",
+  "homepage": "https://github.com/lzwei60/magic-chest#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^19.7.1",
+    "@commitlint/config-conventional": "^19.7.1",
+    "eslint": "^9.20.1",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.0",
+    "sass": "^1.84.0",
+    "sass-loader": "^10.1.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npx lint-staged",
+      "commit-msg": "npx commitlint --edit $1"
+    }
+  },
+  "lint-staged": {
+    "*.js": "eslint --fix",
+    "*.ts": "eslint --fix",
+    "*.vue": "eslint --fix"
+  },
+  "dependencies": {
+    "@dcloudio/uni-ui": "^1.5.11",
+    "dayjs": "^1.11.19"
+  }
+}
