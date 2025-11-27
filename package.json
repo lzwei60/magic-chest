@@ -43,6 +43,7 @@
     "*.vue": "eslint --fix"
   },
   "dependencies": {
-    "@dcloudio/uni-ui": "^1.5.7"
+    "@dcloudio/uni-ui": "^1.5.11",
+    "dayjs": "^1.11.19"
   }
 }

@@ -9,7 +9,7 @@
 	],
 	"subPackages": [
 		{
-			"root": "pageSub/Kingdom-core",
+			"root": "pageSub/KingdomCore",
 			"pages": [
 				{
 					"path": "Kingdom-core",
@@ -20,65 +20,57 @@
 			]
 		},
 		{
-			"root": "pageSub/Calculator",
+			"root": "pageSub/DailyTools",
 			"pages": [
 				{
-					"path": "Calculator",
+					"path": "Calculator/Calculator",
 					"style": {
 						"navigationBarTitleText": "计算器"
 					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/BMI",
-			"pages": [
+				},
 				{
-					"path": "BMI",
+					"path": "UnitConverter/Unit-converter",
 					"style": {
-						"navigationBarTitleText": "BMI计算器"
+						"navigationBarTitleText": "单位转换器"
 					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Currency-exchange",
-			"pages": [
+				},
 				{
-					"path": "Currency-exchange",
+					"path": "QrcodeGenerator/Qrcode-generator",
+					"style": {
+						"navigationBarTitleText": "二维码生成器"
+					}
+				},
+				{
+					"path": "CurrencyExchange/Currency-exchange",
 					"style": {
 						"navigationBarTitleText": "汇率转换器"
 					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Social-security-period",
-			"pages": [
+				},
 				{
-					"path": "Social-security-period",
+					"path": "RelativeCalculator/Relative-calculator",
 					"style": {
-						"navigationBarTitleText": "社保缴费年限计算器"
+						"navigationBarTitleText": "亲戚称呼计算器"
 					}
 				}
 			]
 		},
 		{
-			"root": "pageSub/Retirement-age",
+			"root": "pageSub/FinanceTools",
 			"pages": [
 				{
-					"path": "Retirement-age",
+					"path": "MortgageCalculator/Mortgage-calculator",
 					"style": {
-						"navigationBarTitleText": "退休年龄计算器"
+						"navigationBarTitleText": "房贷计算器"
 					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Pension-calculator",
-			"pages": [
+				},
 				{
-					"path": "Pension-calculator",
+					"path": "CarCalculator/Car-calculator",
+					"style": {
+						"navigationBarTitleText": "车贷计算器"
+					}
+				},
+				{
+					"path": "PensionCalculator/Pension-calculator",
 					"style": {
 						"navigationBarTitleText": "退休养老金计算器"
 					}
@@ -86,78 +78,81 @@
 			]
 		},
 		{
-			"root": "pageSub/Mortgage-calculator",
+			"root": "pageSub/LifeTools",
 			"pages": [
 				{
-					"path": "Mortgage-calculator",
+					"path": "BMI/BMI",
 					"style": {
-						"navigationBarTitleText": "房贷计算器"
+						"navigationBarTitleText": "BMI计算器"
 					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Car-calculator",
-			"pages": [
+				},
 				{
-					"path": "Car-calculator",
-					"style": {
-						"navigationBarTitleText": "车贷计算器"
-					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Individual-calculator",
-			"pages": [
-				{
-					"path": "Individual-calculator",
-					"style": {
-						"navigationBarTitleText": "个税计算器"
-					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Pregnancy-calculator",
-			"pages": [
-				{
-					"path": "Pregnancy-calculator",
+					"path": "PregnancyCalculator/Pregnancy-calculator",
 					"style": {
 						"navigationBarTitleText": "孕期计算器"
 					}
-				}
-			]
-		},
-		{
-			"root": "pageSub/Unit-converter",
-			"pages": [
+				},
 				{
-					"path": "Unit-converter",
+					"path": "Habit/Habit",
 					"style": {
-						"navigationBarTitleText": "单位转换器"
+						"navigationBarTitleText": "打卡器"
 					}
 				}
 			]
 		},
 		{
-			"root": "pageSub/Qrcode-generator",
+			"root": "pageSub/WorkTools",
 			"pages": [
 				{
-					"path": "Qrcode-generator",
+					"path": "IndividualCalculator/Individual-calculator",
 					"style": {
-						"navigationBarTitleText": "二维码生成器"
+						"navigationBarTitleText": "个税计算器"
+					}
+				},
+				{
+					"path": "RetirementAge/Retirement-age",
+					"style": {
+						"navigationBarTitleText": "退休年龄计算器"
+					}
+				},
+				{
+					"path": "SocialSecurityPeriod/Social-security-period",
+					"style": {
+						"navigationBarTitleText": "社保缴费年限计算器"
 					}
 				}
 			]
 		},
 		{
-			"root": "pageSub/Relative-calculator",
+			"root": "pageSub/DataTools",
 			"pages": [
 				{
-					"path": "Relative-calculator",
+					"path": "TextDeduplication/Text-deduplication",
 					"style": {
-						"navigationBarTitleText": "亲戚称呼计算器"
+						"navigationBarTitleText": "文本去重器"
+					}
+				}
+			]
+		},
+		{
+			"root": "pageSub/TimeTools",
+			"pages": [
+				{
+					"path": "DateCalculation/Date-calculation",
+					"style": {
+						"navigationBarTitleText": "日期计算器"
+					}
+				},
+				{
+					"path": "TimezoneConverter/TimezoneConverter",
+					"style": {
+						"navigationBarTitleText": "时区转换器"
+					}
+				},
+				{
+					"path": "Countdown/Countdown",
+					"style": {
+						"navigationBarTitleText": "倒计时"
 					}
 				}
 			]
@@ -173,7 +168,10 @@
 	"easycom": {
 		"autoscan": true,
 		"custom": {
-			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1"
 		}
-	}
+	},
+	"requiredBackgroundModes": [
+		"audio"
+	]
 }

@@ -3,20 +3,25 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const common_vendor = require("./common/vendor.js");
 if (!Math) {
   "./pages/index/index.js";
-  "./pageSub/Kingdom-core/Kingdom-core.js";
-  "./pageSub/Calculator/Calculator.js";
-  "./pageSub/BMI/BMI.js";
-  "./pageSub/Currency-exchange/Currency-exchange.js";
-  "./pageSub/Social-security-period/Social-security-period.js";
-  "./pageSub/Retirement-age/Retirement-age.js";
-  "./pageSub/Pension-calculator/Pension-calculator.js";
-  "./pageSub/Mortgage-calculator/Mortgage-calculator.js";
-  "./pageSub/Car-calculator/Car-calculator.js";
-  "./pageSub/Individual-calculator/Individual-calculator.js";
-  "./pageSub/Pregnancy-calculator/Pregnancy-calculator.js";
-  "./pageSub/Unit-converter/Unit-converter.js";
-  "./pageSub/Qrcode-generator/Qrcode-generator.js";
-  "./pageSub/Relative-calculator/Relative-calculator.js";
+  "./pageSub/KingdomCore/Kingdom-core.js";
+  "./pageSub/DailyTools/Calculator/Calculator.js";
+  "./pageSub/DailyTools/UnitConverter/Unit-converter.js";
+  "./pageSub/DailyTools/QrcodeGenerator/Qrcode-generator.js";
+  "./pageSub/DailyTools/CurrencyExchange/Currency-exchange.js";
+  "./pageSub/DailyTools/RelativeCalculator/Relative-calculator.js";
+  "./pageSub/FinanceTools/MortgageCalculator/Mortgage-calculator.js";
+  "./pageSub/FinanceTools/CarCalculator/Car-calculator.js";
+  "./pageSub/FinanceTools/PensionCalculator/Pension-calculator.js";
+  "./pageSub/LifeTools/BMI/BMI.js";
+  "./pageSub/LifeTools/PregnancyCalculator/Pregnancy-calculator.js";
+  "./pageSub/LifeTools/Habit/Habit.js";
+  "./pageSub/WorkTools/IndividualCalculator/Individual-calculator.js";
+  "./pageSub/WorkTools/RetirementAge/Retirement-age.js";
+  "./pageSub/WorkTools/SocialSecurityPeriod/Social-security-period.js";
+  "./pageSub/DataTools/TextDeduplication/Text-deduplication.js";
+  "./pageSub/TimeTools/DateCalculation/Date-calculation.js";
+  "./pageSub/TimeTools/TimezoneConverter/TimezoneConverter.js";
+  "./pageSub/TimeTools/Countdown/Countdown.js";
 }
 const _sfc_main = {
   onLaunch: function() {

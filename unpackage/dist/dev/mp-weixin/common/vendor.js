@@ -1611,20 +1611,20 @@ class ComputedRefImpl {
     this["__v_isReadonly"] = isReadonly2;
   }
   get value() {
-    const self = toRaw(this);
-    if ((!self._cacheable || self.effect.dirty) && hasChanged(self._value, self._value = self.effect.run())) {
-      triggerRefValue(self, 4);
+    const self2 = toRaw(this);
+    if ((!self2._cacheable || self2.effect.dirty) && hasChanged(self2._value, self2._value = self2.effect.run())) {
+      triggerRefValue(self2, 4);
     }
-    trackRefValue(self);
-    if (self.effect._dirtyLevel >= 2) {
+    trackRefValue(self2);
+    if (self2.effect._dirtyLevel >= 2) {
       if (this._warnRecursive) {
         warn$2(COMPUTED_SIDE_EFFECT_WARN, `
 
 getter: `, this.getter);
       }
-      triggerRefValue(self, 2);
+      triggerRefValue(self2, 2);
     }
-    return self._value;
+    return self2._value;
   }
   set value(newValue) {
     this._setter(newValue);
@@ -5458,12 +5458,41 @@ function vFor(source, renderItem) {
   }
   return ret;
 }
+function renderSlot(name, props = {}, key) {
+  const instance = getCurrentInstance();
+  const { parent, isMounted, ctx: { $scope } } = instance;
+  const vueIds = ($scope.properties || $scope.props).uI;
+  if (!vueIds) {
+    return;
+  }
+  if (!parent && !isMounted) {
+    onMounted(() => {
+      renderSlot(name, props, key);
+    }, instance);
+    return;
+  }
+  const invoker = findScopedSlotInvoker(vueIds, instance);
+  if (invoker) {
+    invoker(name, props, key);
+  }
+}
+function findScopedSlotInvoker(vueId, instance) {
+  let parent = instance.parent;
+  while (parent) {
+    const invokers = parent.$ssi;
+    if (invokers && invokers[vueId]) {
+      return invokers[vueId];
+    }
+    parent = parent.parent;
+  }
+}
 function setRef(ref2, id, opts = {}) {
   const { $templateRefs } = getCurrentInstance();
   $templateRefs.push({ i: id, r: ref2, k: opts.k, f: opts.f });
 }
 const o$1 = (value, key) => vOn(value, key);
 const f$1 = (source, renderItem) => vFor(source, renderItem);
+const r$1 = (name, props, key) => renderSlot(name, props, key);
 const s$1 = (value) => stringifyStyle(value);
 const e$1 = (target, ...sources) => extend(target, ...sources);
 const n$1 = (value) => normalizeClass(value);
@@ -6391,7 +6420,7 @@ function populateParameters(fromRes, toRes) {
   let _SDKVersion = SDKVersion;
   const hostLanguage = (language || "").replace(/_/g, "-");
   const parameters = {
-    appId: "",
+    appId: "__UNI__3D9766C",
     appName: "magic-chest",
     appVersion: "1.0.0",
     appVersionCode: "100",
@@ -6540,7 +6569,7 @@ const getAppBaseInfo = {
       hostName: _hostName,
       hostSDKVersion: SDKVersion,
       hostTheme: theme,
-      appId: "",
+      appId: "__UNI__3D9766C",
       appName: "magic-chest",
       appVersion: "1.0.0",
       appVersionCode: "100",
@@ -7293,9 +7322,9 @@ function isConsoleWritable() {
   return isWritable;
 }
 function initRuntimeSocketService() {
-  const hosts = "127.0.0.1,10.110.0.214";
+  const hosts = "127.0.0.1,10.110.1.104";
   const port = "8090";
-  const id = "mp-weixin_7xHchM";
+  const id = "mp-weixin_pRUwjI";
   const lazy = typeof swan !== "undefined";
   let restoreError = lazy ? () => {
   } : initOnError();
@@ -8241,6 +8270,501 @@ const createSubpackageApp = initCreateSubpackageApp();
   wx.createPluginApp = global.createPluginApp = createPluginApp;
   wx.createSubpackageApp = global.createSubpackageApp = createSubpackageApp;
 }
+const createLifeCycleHook = (lifecycle, flag = 0) => (hook, target = getCurrentInstance()) => {
+  !isInSSRComponentSetup && injectHook(lifecycle, hook, target);
+};
+const onShow = /* @__PURE__ */ createLifeCycleHook(
+  ON_SHOW,
+  1 | 2
+  /* HookFlags.PAGE */
+);
+const onHide = /* @__PURE__ */ createLifeCycleHook(
+  ON_HIDE,
+  1 | 2
+  /* HookFlags.PAGE */
+);
+const onUnload = /* @__PURE__ */ createLifeCycleHook(
+  ON_UNLOAD,
+  2
+  /* HookFlags.PAGE */
+);
+var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
+function getDefaultExportFromCjs(x) {
+  return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
+}
+var dayjs_min = { exports: {} };
+(function(module2, exports2) {
+  !function(t2, e2) {
+    module2.exports = e2();
+  }(commonjsGlobal, function() {
+    var t2 = 1e3, e2 = 6e4, n2 = 36e5, r2 = "millisecond", i2 = "second", s2 = "minute", u2 = "hour", a2 = "day", o2 = "week", c2 = "month", f2 = "quarter", h2 = "year", d2 = "date", l2 = "Invalid Date", $2 = /^(\d{4})[-/]?(\d{1,2})?[-/]?(\d{0,2})[Tt\s]*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?[.:]?(\d+)?$/, y2 = /\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g, M2 = { name: "en", weekdays: "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), months: "January_February_March_April_May_June_July_August_September_October_November_December".split("_"), ordinal: function(t3) {
+      var e3 = ["th", "st", "nd", "rd"], n3 = t3 % 100;
+      return "[" + t3 + (e3[(n3 - 20) % 10] || e3[n3] || e3[0]) + "]";
+    } }, m2 = function(t3, e3, n3) {
+      var r3 = String(t3);
+      return !r3 || r3.length >= e3 ? t3 : "" + Array(e3 + 1 - r3.length).join(n3) + t3;
+    }, v2 = { s: m2, z: function(t3) {
+      var e3 = -t3.utcOffset(), n3 = Math.abs(e3), r3 = Math.floor(n3 / 60), i3 = n3 % 60;
+      return (e3 <= 0 ? "+" : "-") + m2(r3, 2, "0") + ":" + m2(i3, 2, "0");
+    }, m: function t3(e3, n3) {
+      if (e3.date() < n3.date())
+        return -t3(n3, e3);
+      var r3 = 12 * (n3.year() - e3.year()) + (n3.month() - e3.month()), i3 = e3.clone().add(r3, c2), s3 = n3 - i3 < 0, u3 = e3.clone().add(r3 + (s3 ? -1 : 1), c2);
+      return +(-(r3 + (n3 - i3) / (s3 ? i3 - u3 : u3 - i3)) || 0);
+    }, a: function(t3) {
+      return t3 < 0 ? Math.ceil(t3) || 0 : Math.floor(t3);
+    }, p: function(t3) {
+      return { M: c2, y: h2, w: o2, d: a2, D: d2, h: u2, m: s2, s: i2, ms: r2, Q: f2 }[t3] || String(t3 || "").toLowerCase().replace(/s$/, "");
+    }, u: function(t3) {
+      return void 0 === t3;
+    } }, g2 = "en", D = {};
+    D[g2] = M2;
+    var p2 = "$isDayjsObject", S2 = function(t3) {
+      return t3 instanceof _2 || !(!t3 || !t3[p2]);
+    }, w2 = function t3(e3, n3, r3) {
+      var i3;
+      if (!e3)
+        return g2;
+      if ("string" == typeof e3) {
+        var s3 = e3.toLowerCase();
+        D[s3] && (i3 = s3), n3 && (D[s3] = n3, i3 = s3);
+        var u3 = e3.split("-");
+        if (!i3 && u3.length > 1)
+          return t3(u3[0]);
+      } else {
+        var a3 = e3.name;
+        D[a3] = e3, i3 = a3;
+      }
+      return !r3 && i3 && (g2 = i3), i3 || !r3 && g2;
+    }, O2 = function(t3, e3) {
+      if (S2(t3))
+        return t3.clone();
+      var n3 = "object" == typeof e3 ? e3 : {};
+      return n3.date = t3, n3.args = arguments, new _2(n3);
+    }, b2 = v2;
+    b2.l = w2, b2.i = S2, b2.w = function(t3, e3) {
+      return O2(t3, { locale: e3.$L, utc: e3.$u, x: e3.$x, $offset: e3.$offset });
+    };
+    var _2 = function() {
+      function M3(t3) {
+        this.$L = w2(t3.locale, null, true), this.parse(t3), this.$x = this.$x || t3.x || {}, this[p2] = true;
+      }
+      var m3 = M3.prototype;
+      return m3.parse = function(t3) {
+        this.$d = function(t4) {
+          var e3 = t4.date, n3 = t4.utc;
+          if (null === e3)
+            return /* @__PURE__ */ new Date(NaN);
+          if (b2.u(e3))
+            return /* @__PURE__ */ new Date();
+          if (e3 instanceof Date)
+            return new Date(e3);
+          if ("string" == typeof e3 && !/Z$/i.test(e3)) {
+            var r3 = e3.match($2);
+            if (r3) {
+              var i3 = r3[2] - 1 || 0, s3 = (r3[7] || "0").substring(0, 3);
+              return n3 ? new Date(Date.UTC(r3[1], i3, r3[3] || 1, r3[4] || 0, r3[5] || 0, r3[6] || 0, s3)) : new Date(r3[1], i3, r3[3] || 1, r3[4] || 0, r3[5] || 0, r3[6] || 0, s3);
+            }
+          }
+          return new Date(e3);
+        }(t3), this.init();
+      }, m3.init = function() {
+        var t3 = this.$d;
+        this.$y = t3.getFullYear(), this.$M = t3.getMonth(), this.$D = t3.getDate(), this.$W = t3.getDay(), this.$H = t3.getHours(), this.$m = t3.getMinutes(), this.$s = t3.getSeconds(), this.$ms = t3.getMilliseconds();
+      }, m3.$utils = function() {
+        return b2;
+      }, m3.isValid = function() {
+        return !(this.$d.toString() === l2);
+      }, m3.isSame = function(t3, e3) {
+        var n3 = O2(t3);
+        return this.startOf(e3) <= n3 && n3 <= this.endOf(e3);
+      }, m3.isAfter = function(t3, e3) {
+        return O2(t3) < this.startOf(e3);
+      }, m3.isBefore = function(t3, e3) {
+        return this.endOf(e3) < O2(t3);
+      }, m3.$g = function(t3, e3, n3) {
+        return b2.u(t3) ? this[e3] : this.set(n3, t3);
+      }, m3.unix = function() {
+        return Math.floor(this.valueOf() / 1e3);
+      }, m3.valueOf = function() {
+        return this.$d.getTime();
+      }, m3.startOf = function(t3, e3) {
+        var n3 = this, r3 = !!b2.u(e3) || e3, f3 = b2.p(t3), l3 = function(t4, e4) {
+          var i3 = b2.w(n3.$u ? Date.UTC(n3.$y, e4, t4) : new Date(n3.$y, e4, t4), n3);
+          return r3 ? i3 : i3.endOf(a2);
+        }, $3 = function(t4, e4) {
+          return b2.w(n3.toDate()[t4].apply(n3.toDate("s"), (r3 ? [0, 0, 0, 0] : [23, 59, 59, 999]).slice(e4)), n3);
+        }, y3 = this.$W, M4 = this.$M, m4 = this.$D, v3 = "set" + (this.$u ? "UTC" : "");
+        switch (f3) {
+          case h2:
+            return r3 ? l3(1, 0) : l3(31, 11);
+          case c2:
+            return r3 ? l3(1, M4) : l3(0, M4 + 1);
+          case o2:
+            var g3 = this.$locale().weekStart || 0, D2 = (y3 < g3 ? y3 + 7 : y3) - g3;
+            return l3(r3 ? m4 - D2 : m4 + (6 - D2), M4);
+          case a2:
+          case d2:
+            return $3(v3 + "Hours", 0);
+          case u2:
+            return $3(v3 + "Minutes", 1);
+          case s2:
+            return $3(v3 + "Seconds", 2);
+          case i2:
+            return $3(v3 + "Milliseconds", 3);
+          default:
+            return this.clone();
+        }
+      }, m3.endOf = function(t3) {
+        return this.startOf(t3, false);
+      }, m3.$set = function(t3, e3) {
+        var n3, o3 = b2.p(t3), f3 = "set" + (this.$u ? "UTC" : ""), l3 = (n3 = {}, n3[a2] = f3 + "Date", n3[d2] = f3 + "Date", n3[c2] = f3 + "Month", n3[h2] = f3 + "FullYear", n3[u2] = f3 + "Hours", n3[s2] = f3 + "Minutes", n3[i2] = f3 + "Seconds", n3[r2] = f3 + "Milliseconds", n3)[o3], $3 = o3 === a2 ? this.$D + (e3 - this.$W) : e3;
+        if (o3 === c2 || o3 === h2) {
+          var y3 = this.clone().set(d2, 1);
+          y3.$d[l3]($3), y3.init(), this.$d = y3.set(d2, Math.min(this.$D, y3.daysInMonth())).$d;
+        } else
+          l3 && this.$d[l3]($3);
+        return this.init(), this;
+      }, m3.set = function(t3, e3) {
+        return this.clone().$set(t3, e3);
+      }, m3.get = function(t3) {
+        return this[b2.p(t3)]();
+      }, m3.add = function(r3, f3) {
+        var d3, l3 = this;
+        r3 = Number(r3);
+        var $3 = b2.p(f3), y3 = function(t3) {
+          var e3 = O2(l3);
+          return b2.w(e3.date(e3.date() + Math.round(t3 * r3)), l3);
+        };
+        if ($3 === c2)
+          return this.set(c2, this.$M + r3);
+        if ($3 === h2)
+          return this.set(h2, this.$y + r3);
+        if ($3 === a2)
+          return y3(1);
+        if ($3 === o2)
+          return y3(7);
+        var M4 = (d3 = {}, d3[s2] = e2, d3[u2] = n2, d3[i2] = t2, d3)[$3] || 1, m4 = this.$d.getTime() + r3 * M4;
+        return b2.w(m4, this);
+      }, m3.subtract = function(t3, e3) {
+        return this.add(-1 * t3, e3);
+      }, m3.format = function(t3) {
+        var e3 = this, n3 = this.$locale();
+        if (!this.isValid())
+          return n3.invalidDate || l2;
+        var r3 = t3 || "YYYY-MM-DDTHH:mm:ssZ", i3 = b2.z(this), s3 = this.$H, u3 = this.$m, a3 = this.$M, o3 = n3.weekdays, c3 = n3.months, f3 = n3.meridiem, h3 = function(t4, n4, i4, s4) {
+          return t4 && (t4[n4] || t4(e3, r3)) || i4[n4].slice(0, s4);
+        }, d3 = function(t4) {
+          return b2.s(s3 % 12 || 12, t4, "0");
+        }, $3 = f3 || function(t4, e4, n4) {
+          var r4 = t4 < 12 ? "AM" : "PM";
+          return n4 ? r4.toLowerCase() : r4;
+        };
+        return r3.replace(y2, function(t4, r4) {
+          return r4 || function(t5) {
+            switch (t5) {
+              case "YY":
+                return String(e3.$y).slice(-2);
+              case "YYYY":
+                return b2.s(e3.$y, 4, "0");
+              case "M":
+                return a3 + 1;
+              case "MM":
+                return b2.s(a3 + 1, 2, "0");
+              case "MMM":
+                return h3(n3.monthsShort, a3, c3, 3);
+              case "MMMM":
+                return h3(c3, a3);
+              case "D":
+                return e3.$D;
+              case "DD":
+                return b2.s(e3.$D, 2, "0");
+              case "d":
+                return String(e3.$W);
+              case "dd":
+                return h3(n3.weekdaysMin, e3.$W, o3, 2);
+              case "ddd":
+                return h3(n3.weekdaysShort, e3.$W, o3, 3);
+              case "dddd":
+                return o3[e3.$W];
+              case "H":
+                return String(s3);
+              case "HH":
+                return b2.s(s3, 2, "0");
+              case "h":
+                return d3(1);
+              case "hh":
+                return d3(2);
+              case "a":
+                return $3(s3, u3, true);
+              case "A":
+                return $3(s3, u3, false);
+              case "m":
+                return String(u3);
+              case "mm":
+                return b2.s(u3, 2, "0");
+              case "s":
+                return String(e3.$s);
+              case "ss":
+                return b2.s(e3.$s, 2, "0");
+              case "SSS":
+                return b2.s(e3.$ms, 3, "0");
+              case "Z":
+                return i3;
+            }
+            return null;
+          }(t4) || i3.replace(":", "");
+        });
+      }, m3.utcOffset = function() {
+        return 15 * -Math.round(this.$d.getTimezoneOffset() / 15);
+      }, m3.diff = function(r3, d3, l3) {
+        var $3, y3 = this, M4 = b2.p(d3), m4 = O2(r3), v3 = (m4.utcOffset() - this.utcOffset()) * e2, g3 = this - m4, D2 = function() {
+          return b2.m(y3, m4);
+        };
+        switch (M4) {
+          case h2:
+            $3 = D2() / 12;
+            break;
+          case c2:
+            $3 = D2();
+            break;
+          case f2:
+            $3 = D2() / 3;
+            break;
+          case o2:
+            $3 = (g3 - v3) / 6048e5;
+            break;
+          case a2:
+            $3 = (g3 - v3) / 864e5;
+            break;
+          case u2:
+            $3 = g3 / n2;
+            break;
+          case s2:
+            $3 = g3 / e2;
+            break;
+          case i2:
+            $3 = g3 / t2;
+            break;
+          default:
+            $3 = g3;
+        }
+        return l3 ? $3 : b2.a($3);
+      }, m3.daysInMonth = function() {
+        return this.endOf(c2).$D;
+      }, m3.$locale = function() {
+        return D[this.$L];
+      }, m3.locale = function(t3, e3) {
+        if (!t3)
+          return this.$L;
+        var n3 = this.clone(), r3 = w2(t3, e3, true);
+        return r3 && (n3.$L = r3), n3;
+      }, m3.clone = function() {
+        return b2.w(this.$d, this);
+      }, m3.toDate = function() {
+        return new Date(this.valueOf());
+      }, m3.toJSON = function() {
+        return this.isValid() ? this.toISOString() : null;
+      }, m3.toISOString = function() {
+        return this.$d.toISOString();
+      }, m3.toString = function() {
+        return this.$d.toUTCString();
+      }, M3;
+    }(), k = _2.prototype;
+    return O2.prototype = k, [["$ms", r2], ["$s", i2], ["$m", s2], ["$H", u2], ["$W", a2], ["$M", c2], ["$y", h2], ["$D", d2]].forEach(function(t3) {
+      k[t3[1]] = function(e3) {
+        return this.$g(e3, t3[0], t3[1]);
+      };
+    }), O2.extend = function(t3, e3) {
+      return t3.$i || (t3(e3, _2, O2), t3.$i = true), O2;
+    }, O2.locale = w2, O2.isDayjs = S2, O2.unix = function(t3) {
+      return O2(1e3 * t3);
+    }, O2.en = D[g2], O2.Ls = D, O2.p = {}, O2;
+  });
+})(dayjs_min);
+var dayjs_minExports = dayjs_min.exports;
+const dayjs = /* @__PURE__ */ getDefaultExportFromCjs(dayjs_minExports);
+var weekday$1 = { exports: {} };
+(function(module2, exports2) {
+  !function(e2, t2) {
+    module2.exports = t2();
+  }(commonjsGlobal, function() {
+    return function(e2, t2) {
+      t2.prototype.weekday = function(e3) {
+        var t3 = this.$locale().weekStart || 0, i2 = this.$W, n2 = (i2 < t3 ? i2 + 7 : i2) - t3;
+        return this.$utils().u(e3) ? n2 : this.subtract(n2, "day").add(e3, "day");
+      };
+    };
+  });
+})(weekday$1);
+var weekdayExports = weekday$1.exports;
+const weekday = /* @__PURE__ */ getDefaultExportFromCjs(weekdayExports);
+var zhCn = { exports: {} };
+(function(module2, exports2) {
+  !function(e2, _2) {
+    module2.exports = _2(dayjs_minExports);
+  }(commonjsGlobal, function(e2) {
+    function _2(e3) {
+      return e3 && "object" == typeof e3 && "default" in e3 ? e3 : { default: e3 };
+    }
+    var t2 = _2(e2), d2 = { name: "zh-cn", weekdays: "星期日_星期一_星期二_星期三_星期四_星期五_星期六".split("_"), weekdaysShort: "周日_周一_周二_周三_周四_周五_周六".split("_"), weekdaysMin: "日_一_二_三_四_五_六".split("_"), months: "一月_二月_三月_四月_五月_六月_七月_八月_九月_十月_十一月_十二月".split("_"), monthsShort: "1月_2月_3月_4月_5月_6月_7月_8月_9月_10月_11月_12月".split("_"), ordinal: function(e3, _3) {
+      return "W" === _3 ? e3 + "周" : e3 + "日";
+    }, weekStart: 1, yearStart: 4, formats: { LT: "HH:mm", LTS: "HH:mm:ss", L: "YYYY/MM/DD", LL: "YYYY年M月D日", LLL: "YYYY年M月D日Ah点mm分", LLLL: "YYYY年M月D日ddddAh点mm分", l: "YYYY/M/D", ll: "YYYY年M月D日", lll: "YYYY年M月D日 HH:mm", llll: "YYYY年M月D日dddd HH:mm" }, relativeTime: { future: "%s内", past: "%s前", s: "几秒", m: "1 分钟", mm: "%d 分钟", h: "1 小时", hh: "%d 小时", d: "1 天", dd: "%d 天", M: "1 个月", MM: "%d 个月", y: "1 年", yy: "%d 年" }, meridiem: function(e3, _3) {
+      var t3 = 100 * e3 + _3;
+      return t3 < 600 ? "凌晨" : t3 < 900 ? "早上" : t3 < 1100 ? "上午" : t3 < 1300 ? "中午" : t3 < 1800 ? "下午" : "晚上";
+    } };
+    return t2.default.locale(d2, null, true), d2;
+  });
+})(zhCn);
+var utc$1 = { exports: {} };
+(function(module2, exports2) {
+  !function(t2, i2) {
+    module2.exports = i2();
+  }(commonjsGlobal, function() {
+    var t2 = "minute", i2 = /[+-]\d\d(?::?\d\d)?/g, e2 = /([+-]|\d\d)/g;
+    return function(s2, f2, n2) {
+      var u2 = f2.prototype;
+      n2.utc = function(t3) {
+        var i3 = { date: t3, utc: true, args: arguments };
+        return new f2(i3);
+      }, u2.utc = function(i3) {
+        var e3 = n2(this.toDate(), { locale: this.$L, utc: true });
+        return i3 ? e3.add(this.utcOffset(), t2) : e3;
+      }, u2.local = function() {
+        return n2(this.toDate(), { locale: this.$L, utc: false });
+      };
+      var r2 = u2.parse;
+      u2.parse = function(t3) {
+        t3.utc && (this.$u = true), this.$utils().u(t3.$offset) || (this.$offset = t3.$offset), r2.call(this, t3);
+      };
+      var o2 = u2.init;
+      u2.init = function() {
+        if (this.$u) {
+          var t3 = this.$d;
+          this.$y = t3.getUTCFullYear(), this.$M = t3.getUTCMonth(), this.$D = t3.getUTCDate(), this.$W = t3.getUTCDay(), this.$H = t3.getUTCHours(), this.$m = t3.getUTCMinutes(), this.$s = t3.getUTCSeconds(), this.$ms = t3.getUTCMilliseconds();
+        } else
+          o2.call(this);
+      };
+      var a2 = u2.utcOffset;
+      u2.utcOffset = function(s3, f3) {
+        var n3 = this.$utils().u;
+        if (n3(s3))
+          return this.$u ? 0 : n3(this.$offset) ? a2.call(this) : this.$offset;
+        if ("string" == typeof s3 && (s3 = function(t3) {
+          void 0 === t3 && (t3 = "");
+          var s4 = t3.match(i2);
+          if (!s4)
+            return null;
+          var f4 = ("" + s4[0]).match(e2) || ["-", 0, 0], n4 = f4[0], u4 = 60 * +f4[1] + +f4[2];
+          return 0 === u4 ? 0 : "+" === n4 ? u4 : -u4;
+        }(s3), null === s3))
+          return this;
+        var u3 = Math.abs(s3) <= 16 ? 60 * s3 : s3;
+        if (0 === u3)
+          return this.utc(f3);
+        var r3 = this.clone();
+        if (f3)
+          return r3.$offset = u3, r3.$u = false, r3;
+        var o3 = this.$u ? this.toDate().getTimezoneOffset() : -1 * this.utcOffset();
+        return (r3 = this.local().add(u3 + o3, t2)).$offset = u3, r3.$x.$localOffset = o3, r3;
+      };
+      var h2 = u2.format;
+      u2.format = function(t3) {
+        var i3 = t3 || (this.$u ? "YYYY-MM-DDTHH:mm:ss[Z]" : "");
+        return h2.call(this, i3);
+      }, u2.valueOf = function() {
+        var t3 = this.$utils().u(this.$offset) ? 0 : this.$offset + (this.$x.$localOffset || this.$d.getTimezoneOffset());
+        return this.$d.valueOf() - 6e4 * t3;
+      }, u2.isUTC = function() {
+        return !!this.$u;
+      }, u2.toISOString = function() {
+        return this.toDate().toISOString();
+      }, u2.toString = function() {
+        return this.toDate().toUTCString();
+      };
+      var l2 = u2.toDate;
+      u2.toDate = function(t3) {
+        return "s" === t3 && this.$offset ? n2(this.format("YYYY-MM-DD HH:mm:ss:SSS")).toDate() : l2.call(this);
+      };
+      var c2 = u2.diff;
+      u2.diff = function(t3, i3, e3) {
+        if (t3 && this.$u === t3.$u)
+          return c2.call(this, t3, i3, e3);
+        var s3 = this.local(), f3 = n2(t3).local();
+        return c2.call(s3, f3, i3, e3);
+      };
+    };
+  });
+})(utc$1);
+var utcExports = utc$1.exports;
+const utc = /* @__PURE__ */ getDefaultExportFromCjs(utcExports);
+var timezone$1 = { exports: {} };
+(function(module2, exports2) {
+  !function(t2, e2) {
+    module2.exports = e2();
+  }(commonjsGlobal, function() {
+    var t2 = { year: 0, month: 1, day: 2, hour: 3, minute: 4, second: 5 }, e2 = {};
+    return function(n2, i2, o2) {
+      var r2, a2 = function(t3, n3, i3) {
+        void 0 === i3 && (i3 = {});
+        var o3 = new Date(t3), r3 = function(t4, n4) {
+          void 0 === n4 && (n4 = {});
+          var i4 = n4.timeZoneName || "short", o4 = t4 + "|" + i4, r4 = e2[o4];
+          return r4 || (r4 = new Intl.DateTimeFormat("en-US", { hour12: false, timeZone: t4, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: i4 }), e2[o4] = r4), r4;
+        }(n3, i3);
+        return r3.formatToParts(o3);
+      }, u2 = function(e3, n3) {
+        for (var i3 = a2(e3, n3), r3 = [], u3 = 0; u3 < i3.length; u3 += 1) {
+          var f3 = i3[u3], s3 = f3.type, m2 = f3.value, c2 = t2[s3];
+          c2 >= 0 && (r3[c2] = parseInt(m2, 10));
+        }
+        var d2 = r3[3], l2 = 24 === d2 ? 0 : d2, h2 = r3[0] + "-" + r3[1] + "-" + r3[2] + " " + l2 + ":" + r3[4] + ":" + r3[5] + ":000", v2 = +e3;
+        return (o2.utc(h2).valueOf() - (v2 -= v2 % 1e3)) / 6e4;
+      }, f2 = i2.prototype;
+      f2.tz = function(t3, e3) {
+        void 0 === t3 && (t3 = r2);
+        var n3, i3 = this.utcOffset(), a3 = this.toDate(), u3 = a3.toLocaleString("en-US", { timeZone: t3 }), f3 = Math.round((a3 - new Date(u3)) / 1e3 / 60), s3 = 15 * -Math.round(a3.getTimezoneOffset() / 15) - f3;
+        if (!Number(s3))
+          n3 = this.utcOffset(0, e3);
+        else if (n3 = o2(u3, { locale: this.$L }).$set("millisecond", this.$ms).utcOffset(s3, true), e3) {
+          var m2 = n3.utcOffset();
+          n3 = n3.add(i3 - m2, "minute");
+        }
+        return n3.$x.$timezone = t3, n3;
+      }, f2.offsetName = function(t3) {
+        var e3 = this.$x.$timezone || o2.tz.guess(), n3 = a2(this.valueOf(), e3, { timeZoneName: t3 }).find(function(t4) {
+          return "timezonename" === t4.type.toLowerCase();
+        });
+        return n3 && n3.value;
+      };
+      var s2 = f2.startOf;
+      f2.startOf = function(t3, e3) {
+        if (!this.$x || !this.$x.$timezone)
+          return s2.call(this, t3, e3);
+        var n3 = o2(this.format("YYYY-MM-DD HH:mm:ss:SSS"), { locale: this.$L });
+        return s2.call(n3, t3, e3).tz(this.$x.$timezone, true);
+      }, o2.tz = function(t3, e3, n3) {
+        var i3 = n3 && e3, a3 = n3 || e3 || r2, f3 = u2(+o2(), a3);
+        if ("string" != typeof t3)
+          return o2(t3).tz(a3);
+        var s3 = function(t4, e4, n4) {
+          var i4 = t4 - 60 * e4 * 1e3, o3 = u2(i4, n4);
+          if (e4 === o3)
+            return [i4, e4];
+          var r3 = u2(i4 -= 60 * (o3 - e4) * 1e3, n4);
+          return o3 === r3 ? [i4, o3] : [t4 - 60 * Math.min(o3, r3) * 1e3, Math.max(o3, r3)];
+        }(o2.utc(t3, i3).valueOf(), f3, a3), m2 = s3[0], c2 = s3[1], d2 = o2(m2).utcOffset(c2);
+        return d2.$x.$timezone = a3, d2;
+      }, o2.tz.guess = function() {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+      }, o2.tz.setDefault = function(t3) {
+        r2 = t3;
+      };
+    };
+  });
+})(timezone$1);
+var timezoneExports = timezone$1.exports;
+const timezone = /* @__PURE__ */ getDefaultExportFromCjs(timezoneExports);
 const fontData = [
   {
     "font_class": "arrow-down",
@@ -8897,7 +9421,7 @@ const pages = [
 ];
 const subPackages = [
   {
-    root: "pageSub/Kingdom-core",
+    root: "pageSub/KingdomCore",
     pages: [
       {
         path: "Kingdom-core",
@@ -8908,65 +9432,57 @@ const subPackages = [
     ]
   },
   {
-    root: "pageSub/Calculator",
+    root: "pageSub/DailyTools",
     pages: [
       {
-        path: "Calculator",
+        path: "Calculator/Calculator",
         style: {
           navigationBarTitleText: "计算器"
         }
-      }
-    ]
-  },
-  {
-    root: "pageSub/BMI",
-    pages: [
+      },
       {
-        path: "BMI",
+        path: "UnitConverter/Unit-converter",
         style: {
-          navigationBarTitleText: "BMI计算器"
+          navigationBarTitleText: "单位转换器"
         }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Currency-exchange",
-    pages: [
+      },
       {
-        path: "Currency-exchange",
+        path: "QrcodeGenerator/Qrcode-generator",
+        style: {
+          navigationBarTitleText: "二维码生成器"
+        }
+      },
+      {
+        path: "CurrencyExchange/Currency-exchange",
         style: {
           navigationBarTitleText: "汇率转换器"
         }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Social-security-period",
-    pages: [
+      },
       {
-        path: "Social-security-period",
+        path: "RelativeCalculator/Relative-calculator",
         style: {
-          navigationBarTitleText: "社保缴费年限计算器"
+          navigationBarTitleText: "亲戚称呼计算器"
         }
       }
     ]
   },
   {
-    root: "pageSub/Retirement-age",
+    root: "pageSub/FinanceTools",
     pages: [
       {
-        path: "Retirement-age",
+        path: "MortgageCalculator/Mortgage-calculator",
         style: {
-          navigationBarTitleText: "退休年龄计算器"
+          navigationBarTitleText: "房贷计算器"
         }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Pension-calculator",
-    pages: [
+      },
       {
-        path: "Pension-calculator",
+        path: "CarCalculator/Car-calculator",
+        style: {
+          navigationBarTitleText: "车贷计算器"
+        }
+      },
+      {
+        path: "PensionCalculator/Pension-calculator",
         style: {
           navigationBarTitleText: "退休养老金计算器"
         }
@@ -8974,78 +9490,81 @@ const subPackages = [
     ]
   },
   {
-    root: "pageSub/Mortgage-calculator",
+    root: "pageSub/LifeTools",
     pages: [
       {
-        path: "Mortgage-calculator",
+        path: "BMI/BMI",
         style: {
-          navigationBarTitleText: "房贷计算器"
+          navigationBarTitleText: "BMI计算器"
         }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Car-calculator",
-    pages: [
+      },
       {
-        path: "Car-calculator",
-        style: {
-          navigationBarTitleText: "车贷计算器"
-        }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Individual-calculator",
-    pages: [
-      {
-        path: "Individual-calculator",
-        style: {
-          navigationBarTitleText: "个税计算器"
-        }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Pregnancy-calculator",
-    pages: [
-      {
-        path: "Pregnancy-calculator",
+        path: "PregnancyCalculator/Pregnancy-calculator",
         style: {
           navigationBarTitleText: "孕期计算器"
         }
-      }
-    ]
-  },
-  {
-    root: "pageSub/Unit-converter",
-    pages: [
+      },
       {
-        path: "Unit-converter",
+        path: "Habit/Habit",
         style: {
-          navigationBarTitleText: "单位转换器"
+          navigationBarTitleText: "打卡器"
         }
       }
     ]
   },
   {
-    root: "pageSub/Qrcode-generator",
+    root: "pageSub/WorkTools",
     pages: [
       {
-        path: "Qrcode-generator",
+        path: "IndividualCalculator/Individual-calculator",
         style: {
-          navigationBarTitleText: "二维码生成器"
+          navigationBarTitleText: "个税计算器"
+        }
+      },
+      {
+        path: "RetirementAge/Retirement-age",
+        style: {
+          navigationBarTitleText: "退休年龄计算器"
+        }
+      },
+      {
+        path: "SocialSecurityPeriod/Social-security-period",
+        style: {
+          navigationBarTitleText: "社保缴费年限计算器"
         }
       }
     ]
   },
   {
-    root: "pageSub/Relative-calculator",
+    root: "pageSub/DataTools",
     pages: [
       {
-        path: "Relative-calculator",
+        path: "TextDeduplication/Text-deduplication",
         style: {
-          navigationBarTitleText: "亲戚称呼计算器"
+          navigationBarTitleText: "文本去重器"
+        }
+      }
+    ]
+  },
+  {
+    root: "pageSub/TimeTools",
+    pages: [
+      {
+        path: "DateCalculation/Date-calculation",
+        style: {
+          navigationBarTitleText: "日期计算器"
+        }
+      },
+      {
+        path: "TimezoneConverter/TimezoneConverter",
+        style: {
+          navigationBarTitleText: "时区转换器"
+        }
+      },
+      {
+        path: "Countdown/Countdown",
+        style: {
+          navigationBarTitleText: "倒计时"
         }
       }
     ]
@@ -9061,15 +9580,19 @@ const uniIdRouter = {};
 const easycom = {
   autoscan: true,
   custom: {
-    "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+    "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1"
   }
 };
+const requiredBackgroundModes = [
+  "audio"
+];
 const e = {
   pages,
   subPackages,
   globalStyle,
   uniIdRouter,
-  easycom
+  easycom,
+  requiredBackgroundModes
 };
 var define_process_env_UNI_SECURE_NETWORK_CONFIG_default = [];
 function t(e2) {
@@ -9399,7 +9922,7 @@ function T(e2) {
 const b = true, E = "mp-weixin", A = T(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), P = E, C = T(""), O = T("[]") || [];
 let N = "";
 try {
-  N = "";
+  N = "__UNI__3D9766C";
 } catch (e2) {
 }
 let L = {};
@@ -12380,8 +12903,8 @@ function getDefaultSecond(hideSecond) {
   return hideSecond ? "00:00" : "00:00:00";
 }
 function dateCompare(startDate, endDate) {
-  startDate = new Date(fixIosDateFormat(startDate));
-  endDate = new Date(fixIosDateFormat(endDate));
+  startDate = new Date(fixIosDateFormat(typeof startDate === "string" ? startDate.trim() : startDate));
+  endDate = new Date(fixIosDateFormat(typeof endDate === "string" ? endDate.trim() : endDate));
   return startDate <= endDate;
 }
 function checkDate(date) {
@@ -12514,10 +13037,12 @@ exports.computed = computed;
 exports.createAnimation = createAnimation;
 exports.createSSRApp = createSSRApp;
 exports.dateCompare = dateCompare;
+exports.dayjs = dayjs;
 exports.e = e$1;
 exports.f = f$1;
 exports.fixIosDateFormat = fixIosDateFormat;
 exports.fontData = fontData;
+exports.getCurrentInstance = getCurrentInstance;
 exports.getDate = getDate;
 exports.getDateTime = getDateTime;
 exports.getDefaultSecond = getDefaultSecond;
@@ -12527,16 +13052,26 @@ exports.index = index;
 exports.initVueI18n = initVueI18n;
 exports.messages = messages;
 exports.n = n$1;
+exports.nextTick$1 = nextTick$1;
 exports.o = o$1;
+exports.onHide = onHide;
 exports.onMounted = onMounted;
+exports.onShow = onShow;
+exports.onUnload = onUnload;
+exports.onUnmounted = onUnmounted;
 exports.p = p$1;
 exports.popup = popup;
+exports.r = r$1;
 exports.ref = ref;
 exports.resolveComponent = resolveComponent;
 exports.s = s$1;
 exports.sr = sr;
 exports.t = t$1;
+exports.timezone = timezone;
 exports.tr = tr;
 exports.unref = unref;
+exports.utc = utc;
 exports.watch = watch;
+exports.weekday = weekday;
+exports.wx$1 = wx$1;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/common/vendor.js.map

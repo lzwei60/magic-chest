@@ -4,87 +4,57 @@
   ],
   "subPackages": [
     {
-      "root": "pageSub/Kingdom-core",
+      "root": "pageSub/KingdomCore",
       "pages": [
         "Kingdom-core"
       ]
     },
     {
-      "root": "pageSub/Calculator",
+      "root": "pageSub/DailyTools",
       "pages": [
-        "Calculator"
+        "Calculator/Calculator",
+        "UnitConverter/Unit-converter",
+        "QrcodeGenerator/Qrcode-generator",
+        "CurrencyExchange/Currency-exchange",
+        "RelativeCalculator/Relative-calculator"
       ]
     },
     {
-      "root": "pageSub/BMI",
+      "root": "pageSub/FinanceTools",
       "pages": [
-        "BMI"
+        "MortgageCalculator/Mortgage-calculator",
+        "CarCalculator/Car-calculator",
+        "PensionCalculator/Pension-calculator"
       ]
     },
     {
-      "root": "pageSub/Currency-exchange",
+      "root": "pageSub/LifeTools",
       "pages": [
-        "Currency-exchange"
+        "BMI/BMI",
+        "PregnancyCalculator/Pregnancy-calculator",
+        "Habit/Habit"
       ]
     },
     {
-      "root": "pageSub/Social-security-period",
+      "root": "pageSub/WorkTools",
       "pages": [
-        "Social-security-period"
+        "IndividualCalculator/Individual-calculator",
+        "RetirementAge/Retirement-age",
+        "SocialSecurityPeriod/Social-security-period"
       ]
     },
     {
-      "root": "pageSub/Retirement-age",
+      "root": "pageSub/DataTools",
       "pages": [
-        "Retirement-age"
+        "TextDeduplication/Text-deduplication"
       ]
     },
     {
-      "root": "pageSub/Pension-calculator",
+      "root": "pageSub/TimeTools",
       "pages": [
-        "Pension-calculator"
-      ]
-    },
-    {
-      "root": "pageSub/Mortgage-calculator",
-      "pages": [
-        "Mortgage-calculator"
-      ]
-    },
-    {
-      "root": "pageSub/Car-calculator",
-      "pages": [
-        "Car-calculator"
-      ]
-    },
-    {
-      "root": "pageSub/Individual-calculator",
-      "pages": [
-        "Individual-calculator"
-      ]
-    },
-    {
-      "root": "pageSub/Pregnancy-calculator",
-      "pages": [
-        "Pregnancy-calculator"
-      ]
-    },
-    {
-      "root": "pageSub/Unit-converter",
-      "pages": [
-        "Unit-converter"
-      ]
-    },
-    {
-      "root": "pageSub/Qrcode-generator",
-      "pages": [
-        "Qrcode-generator"
-      ]
-    },
-    {
-      "root": "pageSub/Relative-calculator",
-      "pages": [
-        "Relative-calculator"
+        "DateCalculation/Date-calculation",
+        "TimezoneConverter/TimezoneConverter",
+        "Countdown/Countdown"
       ]
     }
   ],
@@ -94,5 +64,8 @@
     "navigationBarBackgroundColor": "#F8F8F8",
     "backgroundColor": "#F8F8F8"
   },
+  "requiredBackgroundModes": [
+    "audio"
+  ],
   "usingComponents": {}
 }
