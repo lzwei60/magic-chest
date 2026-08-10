@@ -305,7 +305,7 @@ const getWeekday = (dateStr) => {
 		const date = dayjs(dateStr)
 		const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 		return weekdays[date.day()]
-	} catch (e) {
+	} catch {
 		return ''
 	}
 }

@@ -258,7 +258,6 @@ const MIN_SALARY = 1000 // 最小工资（元）
 const MAX_SALARY = 1000000 // 最大工资（元）
 const MIN_YEARS = 1 // 最小缴费年限（年）
 const MAX_YEARS = 50 // 最大缴费年限（年）
-const MIN_BALANCE = 0 // 最小账户余额（元）
 const MAX_BALANCE = 10000000 // 最大账户余额（元）
 
 // 计发月数对照表（根据退休年龄）

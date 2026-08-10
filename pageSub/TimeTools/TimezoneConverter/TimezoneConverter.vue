@@ -137,13 +137,14 @@ import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import weekday from 'dayjs/plugin/weekday'
 import 'dayjs/locale/zh-cn'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../../utils/storage'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 dayjs.extend(weekday)
 dayjs.locale('zh-cn')
 
-const STORAGE_KEY = 'timezone_converter_config'
+const LEGACY_STORAGE_KEY = 'timezone_converter_config'
 
 // 时区列表
 const timezones = [
@@ -265,7 +266,7 @@ const updateCurrentTime = () => {
 		} else {
 			currentTimezone.value = '本地时间'
 		}
-	} catch (e) {
+	} catch {
 		currentTime.value = dayjs().format('YYYY-MM-DD HH:mm:ss')
 		currentTimezone.value = '本地时间'
 	}
@@ -274,9 +275,12 @@ const updateCurrentTime = () => {
 // 加载配置
 const loadConfig = () => {
 	try {
-		const config = uni.getStorageSync(STORAGE_KEY)
+		const config = getStorage(
+			STORAGE_KEYS.timezoneConverterConfig,
+			getStorage(LEGACY_STORAGE_KEY, '')
+		)
 		if (config) {
-			const data = JSON.parse(config)
+			const data = typeof config === 'string' ? JSON.parse(config) : config
 			if (data.sourceTZIndex !== undefined)
 				sourceTZIndex.value = data.sourceTZIndex
 			if (data.targetTZIndex !== undefined)
@@ -290,15 +294,14 @@ const loadConfig = () => {
 
 // 保存配置
 const saveConfig = () => {
-	try {
-		const config = {
-			sourceTZIndex: sourceTZIndex.value,
-			targetTZIndex: targetTZIndex.value,
-			inputMode: inputMode.value,
-		}
-		uni.setStorageSync(STORAGE_KEY, JSON.stringify(config))
-	} catch (e) {
-		console.error('保存配置失败:', e)
+	const config = {
+		sourceTZIndex: sourceTZIndex.value,
+		targetTZIndex: targetTZIndex.value,
+		inputMode: inputMode.value,
+	}
+	const ok = setStorage(STORAGE_KEYS.timezoneConverterConfig, config)
+	if (!ok) {
+		console.error('保存配置失败')
 	}
 }
 
@@ -404,7 +407,7 @@ const selectCommonTimezone = (tz) => {
 const getCommonTimezoneTime = (tzValue) => {
 	try {
 		return dayjs.tz(tzValue).format('HH:mm')
-	} catch (e) {
+	} catch {
 		return ''
 	}
 }

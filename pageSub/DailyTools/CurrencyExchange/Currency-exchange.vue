@@ -163,6 +163,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../../utils/storage'
 
 // 货币选项
 const currencyOptions = [
@@ -193,6 +194,7 @@ const exchangeRates = ref({})
 const lastUpdateTime = ref('')
 const loading = ref(false)
 const convertedAmount = ref(null)
+const EXCHANGE_RATE_API_KEY = process.env.VUE_APP_EXCHANGE_RATE_API_KEY || ''
 
 // 千分位格式化
 const formatNumber = (num) => {
@@ -229,7 +231,7 @@ const detectLocalCurrency = () => {
 		const locale = res.language || 'zh'
 		const langToCurrency = { zh: 'CNY', en: 'USD', ja: 'JPY', ko: 'KRW' }
 		return langToCurrency[locale] || 'CNY'
-	} catch (e) {
+	} catch {
 		return 'CNY'
 	}
 }
@@ -238,10 +240,14 @@ fromCurrency.value = detectLocalCurrency()
 // 缓存逻辑
 const shouldUpdateRates = () => {
 	try {
-		const lastUpdate = uni.getStorageSync(
-			`lastRateUpdate_${fromCurrency.value}`
+		const lastUpdate = getStorage(
+			STORAGE_KEYS.exchangeRatesUpdatedAt(fromCurrency.value),
+			getStorage(`lastRateUpdate_${fromCurrency.value}`, '')
 		)
-		const rates = uni.getStorageSync(`exchangeRates_${fromCurrency.value}`)
+		const rates = getStorage(
+			STORAGE_KEYS.exchangeRates(fromCurrency.value),
+			getStorage(`exchangeRates_${fromCurrency.value}`, null)
+		)
 		if (!lastUpdate || !rates) return true
 		const lastDate = new Date(lastUpdate)
 		const today = new Date()
@@ -257,9 +263,13 @@ const shouldUpdateRates = () => {
 
 const getCachedRates = () => {
 	try {
-		const rates = uni.getStorageSync(`exchangeRates_${fromCurrency.value}`)
-		const updateTime = uni.getStorageSync(
-			`lastRateUpdate_${fromCurrency.value}`
+		const rates = getStorage(
+			STORAGE_KEYS.exchangeRates(fromCurrency.value),
+			getStorage(`exchangeRates_${fromCurrency.value}`, null)
+		)
+		const updateTime = getStorage(
+			STORAGE_KEYS.exchangeRatesUpdatedAt(fromCurrency.value),
+			getStorage(`lastRateUpdate_${fromCurrency.value}`, '')
 		)
 		if (rates && updateTime) {
 			exchangeRates.value = rates
@@ -273,13 +283,11 @@ const getCachedRates = () => {
 }
 
 const saveRatesToCache = (rates) => {
-	try {
-		uni.setStorageSync(`exchangeRates_${fromCurrency.value}`, rates)
-		uni.setStorageSync(
-			`lastRateUpdate_${fromCurrency.value}`,
-			new Date().toISOString()
-		)
-	} catch {}
+	setStorage(STORAGE_KEYS.exchangeRates(fromCurrency.value), rates)
+	setStorage(
+		STORAGE_KEYS.exchangeRatesUpdatedAt(fromCurrency.value),
+		new Date().toISOString()
+	)
 }
 
 // 获取汇率
@@ -305,9 +313,13 @@ const fetchExchangeRates = async (showLoading = true) => {
 			}
 		}
 
+		if (!EXCHANGE_RATE_API_KEY) {
+			throw new Error('汇率服务未配置')
+		}
+
 		// 从API获取最新汇率
 		const response = await uni.request({
-			url: `https://v6.exchangerate-api.com/v6/72515e93e2c92d130d9ff638/latest/${fromCurrency.value}`,
+			url: `https://v6.exchangerate-api.com/v6/${EXCHANGE_RATE_API_KEY}/latest/${fromCurrency.value}`,
 			method: 'GET',
 			timeout: 10000, // 10秒超时
 		})
@@ -355,7 +367,9 @@ const fetchExchangeRates = async (showLoading = true) => {
 			})
 		} else {
 			uni.showToast({
-				title: '获取汇率失败，请检查网络',
+				title: EXCHANGE_RATE_API_KEY
+					? '获取汇率失败，请检查网络'
+					: '汇率服务未配置',
 				icon: 'error',
 				duration: 2000,
 			})

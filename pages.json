@@ -131,6 +131,12 @@
 					"style": {
 						"navigationBarTitleText": "文本去重器"
 					}
+				},
+				{
+					"path": "ImageTextRecognition/Image-text-recognition",
+					"style": {
+						"navigationBarTitleText": "图片文字识别"
+					}
 				}
 			]
 		},

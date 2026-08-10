@@ -202,12 +202,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../../utils/storage'
 
 const habits = ref([])
 const newHabit = ref('')
 const sortIndex = ref(0)
 
-const STORAGE_KEY = 'habit_tracker_data'
+const LEGACY_STORAGE_KEY = 'habit_tracker_data'
 
 // 排序选项
 const sortOptions = [
@@ -363,9 +364,12 @@ const onSortChange = (e) => {
 // 数据加载和保存
 const loadData = () => {
 	try {
-		const data = uni.getStorageSync(STORAGE_KEY)
+		const data = getStorage(
+			STORAGE_KEYS.habitTracker,
+			getStorage(LEGACY_STORAGE_KEY, '')
+		)
 		if (data) {
-			habits.value = JSON.parse(data)
+			habits.value = typeof data === 'string' ? JSON.parse(data) : data
 			// 兼容旧数据，为新字段添加默认值
 			habits.value.forEach((habit) => {
 				if (!habit.checkHistory) habit.checkHistory = []
@@ -380,10 +384,8 @@ const loadData = () => {
 }
 
 const saveData = () => {
-	try {
-		uni.setStorageSync(STORAGE_KEY, JSON.stringify(habits.value))
-	} catch (e) {
-		console.error('保存数据失败:', e)
+	const ok = setStorage(STORAGE_KEYS.habitTracker, habits.value)
+	if (!ok) {
 		uni.showToast({ title: '保存失败', icon: 'none' })
 	}
 }

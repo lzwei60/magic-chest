@@ -183,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 
 // 常量定义
 const MIN_HEIGHT = 50 // 最小身高 (cm)

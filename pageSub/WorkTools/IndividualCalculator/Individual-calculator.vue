@@ -457,7 +457,6 @@ const validateInput = () => {
 
 // 处理专项附加扣除输入变化
 const handleDeductionChange = (key) => {
-	const item = deductionItems.find((item) => item.key === key)
 	const value = Number(specialDeductions.value[key]) || 0
 
 	// 限制最小值

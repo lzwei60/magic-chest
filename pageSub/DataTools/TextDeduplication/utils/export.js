@@ -12,9 +12,14 @@ export function exportExcel(list) {
 		a.download = filename
 		a.click()
 	} else {
-		// 小程序端
-		const fs = wx.getFileSystemManager()
-		const filePath = `${wx.env.USER_DATA_PATH}/${filename}`
+		const fs = uni.getFileSystemManager?.()
+		const userDataPath = uni.env?.USER_DATA_PATH
+
+		if (!fs || !userDataPath) {
+			throw new Error('当前平台不支持导出文件')
+		}
+
+		const filePath = `${userDataPath}/${filename}`
 		fs.writeFileSync(filePath, '\ufeff' + csv, 'utf8')
 		uni.openDocument({ filePath, fileType: 'xls' })
 	}

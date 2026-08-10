@@ -200,6 +200,7 @@
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import UQRCode from '@/uni_modules/Sansnn-uQRCode/js_sdk/uqrcode/uqrcode.js'
 import { DooerCodec } from './utils/core.ts'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../utils/storage'
 
 // 标签页配置
 const tabs = [
@@ -308,8 +309,7 @@ const generateQRCode = async () => {
 		countdown.value = QR_CODE_VALID_DURATION
 		startCountdown()
 
-		console.log('二维码生成成功:', encryptedHex)
-	} catch (err) {
+		} catch (err) {
 		console.error('生成二维码失败:', err)
 		uni.showToast({
 			title: '生成失败，请重试',
@@ -447,17 +447,20 @@ const handleEdit = (item, index) => {
 
 // 保存选中的卡号
 const saveSelectedCard = () => {
-	uni.setStorageSync('selectedCard', selectedCard.value)
+	setStorage(STORAGE_KEYS.kingdomSelectedCard, selectedCard.value)
 }
 
 // 保存自动刷新设置
 const saveAutoRefreshSetting = () => {
-	uni.setStorageSync('autoRefreshEnabled', autoRefreshEnabled.value)
+	setStorage(STORAGE_KEYS.kingdomAutoRefreshEnabled, autoRefreshEnabled.value)
 }
 
 // 加载自动刷新设置
 const loadAutoRefreshSetting = () => {
-	const saved = uni.getStorageSync('autoRefreshEnabled')
+	const saved = getStorage(
+		STORAGE_KEYS.kingdomAutoRefreshEnabled,
+		getStorage('autoRefreshEnabled', null)
+	)
 	if (saved !== null && saved !== undefined) {
 		autoRefreshEnabled.value = saved
 		if (autoRefreshEnabled.value) {
@@ -694,10 +697,8 @@ const handleClear = () => {
 
 // 保存数据到本地
 const saveCardList = () => {
-	try {
-		uni.setStorageSync('cardList', cardList.value)
-	} catch (e) {
-		console.error('保存失败:', e)
+	const ok = setStorage(STORAGE_KEYS.kingdomCardList, cardList.value)
+	if (!ok) {
 		uni.showToast({ title: '保存失败', icon: 'none' })
 	}
 }
@@ -705,7 +706,10 @@ const saveCardList = () => {
 // 从本地加载数据
 const loadCardList = () => {
 	try {
-		const list = uni.getStorageSync('cardList')
+		const list = getStorage(
+			STORAGE_KEYS.kingdomCardList,
+			getStorage('cardList', [])
+		)
 		if (list && Array.isArray(list)) {
 			// 确保所有卡号都是字符串类型
 			cardList.value = list.map((item) => ({
@@ -713,7 +717,10 @@ const loadCardList = () => {
 				value: String(item.value || ''),
 			}))
 			// 加载保存的选中卡号
-			const saved = uni.getStorageSync('selectedCard')
+				const saved = getStorage(
+					STORAGE_KEYS.kingdomSelectedCard,
+					getStorage('selectedCard', '')
+				)
 			const savedStr = saved ? String(saved) : ''
 			if (
 				savedStr &&

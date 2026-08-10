@@ -158,228 +158,27 @@
 	</view>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, unref } from 'vue'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../utils/storage'
+import { TOOL_CATEGORIES, TOOLS, type ToolItem } from '../../utils/tools'
 
 // 常量定义
 const KINGDOM_UNLOCK_CLICKS = 5
 const FAVORITES_DISPLAY_LIMIT = 6
-const STORAGE_KEY_FAVORITES = 'favorites'
-
-// 工具分类
-const categories = [
-	{
-		id: 'daily',
-		name: '日常工具',
-		tools: ['Kingdom', 'calculator', 'unit', 'qrcode', 'relative'],
-	},
-	{
-		id: 'finance',
-		name: '理财工具',
-		tools: ['mortgage', 'car', 'pension'],
-	},
-	{
-		id: 'life',
-		name: '生活工具',
-		tools: ['bmi', 'currency', 'pregnancy'],
-	},
-	{
-		id: 'work',
-		name: '工作工具',
-		tools: ['individual', 'retirement', 'social'],
-	},
-	{
-		id: 'data',
-		name: '数据工具',
-		tools: ['deduplication'],
-	},
-	{
-		id: 'time',
-		name: '时间工具',
-		tools: ['dateCalculation', 'timezoneConverter', 'countdown'],
-	},
-]
+const LEGACY_STORAGE_KEY_FAVORITES = 'favorites'
+const categories = TOOL_CATEGORIES
 
 // 添加点击计数器
 const favoriteClickCount = ref(0)
 // 是否显示金证门禁
 const showKingdom = ref(false)
 
-// 基础工具列表数据
-const defaultTools = ref([
-	{
-		id: 'Kingdom',
-		name: '金证门禁',
-		icon: 'calendar-filled',
-		path: '/pageSub/KingdomCore/Kingdom-core',
-		category: 'daily',
-		hidden: true, // 添加hidden属性标记需要隐藏的工具
-	},
-])
-
-// 日常工具列表数据
-const dailyTools = ref([
-	{
-		id: 'calculator',
-		name: '计算器',
-		icon: 'calendar-filled',
-		path: '/pageSub/DailyTools/Calculator/Calculator',
-		category: 'daily',
-	},
-	{
-		id: 'unit',
-		name: '单位转换器',
-		icon: 'refresh',
-		path: '/pageSub/DailyTools/UnitConverter/Unit-converter',
-		category: 'daily',
-	},
-	{
-		id: 'currency',
-		name: '汇率转换器',
-		icon: 'refresh',
-		path: '/pageSub/DailyTools/CurrencyExchange/Currency-exchange',
-		category: 'daily',
-	},
-	{
-		id: 'qrcode',
-		name: '二维码生成器',
-		icon: 'medal',
-		path: '/pageSub/DailyTools/QrcodeGenerator/Qrcode-generator',
-		category: 'daily',
-	},
-	{
-		id: 'relative',
-		name: '亲戚称呼计算器',
-		icon: 'medal',
-		path: '/pageSub/DailyTools/RelativeCalculator/Relative-calculator',
-		category: 'daily',
-	},
-])
-
-// 理财工具列表数据
-const financeTools = ref([
-	{
-		id: 'mortgage',
-		name: '房贷计算器',
-		icon: 'home',
-		path: '/pageSub/FinanceTools/MortgageCalculator/Mortgage-calculator',
-		category: 'finance',
-	},
-	{
-		id: 'car',
-		name: '车贷计算器',
-		icon: 'cart-filled',
-		path: '/pageSub/FinanceTools/CarCalculator/Car-calculator',
-		category: 'finance',
-	},
-	{
-		id: 'pension',
-		name: '养老金计算器',
-		icon: 'wallet-filled',
-		path: '/pageSub/FinanceTools/PensionCalculator/Pension-calculator',
-		category: 'finance',
-	},
-])
-
-// 生活工具列表数据
-const lifeTools = ref([
-	{
-		id: 'bmi',
-		name: 'BMI计算器',
-		icon: 'person-filled',
-		path: '/pageSub/LifeTools/BMI/BMI',
-		category: 'life',
-	},
-	{
-		id: 'pregnancy',
-		name: '孕期计算器',
-		icon: 'heart-filled',
-		path: '/pageSub/LifeTools/PregnancyCalculator/Pregnancy-calculator',
-		category: 'life',
-	},
-	{
-		id: 'habit',
-		name: '打卡器',
-		icon: 'wallet',
-		path: '/pageSub/LifeTools/Habit/Habit',
-		category: 'life',
-	},
-])
-
-// 工作工具列表数据
-const workTools = ref([
-	{
-		id: 'individual',
-		name: '个税计算器',
-		icon: 'wallet',
-		path: '/pageSub/WorkTools/IndividualCalculator/Individual-calculator',
-		category: 'work',
-	},
-	{
-		id: 'retirement',
-		name: '退休年龄',
-		icon: 'calendar',
-		path: '/pageSub/WorkTools/RetirementAge/Retirement-age',
-		category: 'work',
-	},
-	{
-		id: 'social',
-		name: '社保年限',
-		icon: 'medal',
-		path: '/pageSub/WorkTools/SocialSecurityPeriod/Social-security-period',
-		category: 'work',
-	},
-])
-
-// 数据工具列表数据
-const dataTools = ref([
-	{
-		id: 'deduplication',
-		name: '文本去重',
-		icon: 'compose',
-		path: '/pageSub/DataTools/TextDeduplication/Text-deduplication',
-		category: 'data',
-	},
-])
-
-// 时间工具列表数据
-const timeTools = ref([
-	{
-		id: 'dateCalculation',
-		name: '日期计算器',
-		icon: 'calendar',
-		path: '/pageSub/TimeTools/DateCalculation/Date-calculation',
-		category: 'time',
-	},
-	{
-		id: 'timezoneConverter',
-		name: '时区转换器',
-		icon: 'refreshempty',
-		path: '/pageSub/TimeTools/TimezoneConverter/TimezoneConverter',
-		category: 'time',
-	},
-	{
-		id: 'countdown',
-		name: '倒计时',
-		icon: 'notification',
-		path: '/pageSub/TimeTools/Countdown/Countdown',
-		category: 'time',
-	},
-])
-
 // 工具列表数据
-const tools = computed(() => [
-	...defaultTools.value,
-	...dailyTools.value,
-	...financeTools.value,
-	...lifeTools.value,
-	...workTools.value,
-	...dataTools.value,
-	...timeTools.value,
-])
+const tools = computed(() => TOOLS)
 
 // 获取分类下的工具
-const getToolsByCategory = (categoryId) => {
+const getToolsByCategory = (categoryId: ToolItem['category']) => {
 	const allTools = unref(tools)
 	return allTools.filter(
 		(tool) =>
@@ -389,7 +188,12 @@ const getToolsByCategory = (categoryId) => {
 }
 
 // 我的常用
-const favorites = ref([])
+const favoriteIds = ref<string[]>([])
+const favorites = computed(() =>
+	favoriteIds.value
+		.map((id) => unref(tools).find((tool) => tool.id === id))
+		.filter((tool): tool is ToolItem => Boolean(tool))
+)
 const showAllFavorites = ref(false)
 
 // 显示的常用工具
@@ -400,16 +204,14 @@ const displayedFavorites = computed(() => {
 })
 
 // 判断是否已添加到常用
-const isFavorite = (id) => {
-	return favorites.value.some((item) => item.id === id)
+const isFavorite = (id: string) => {
+	return favoriteIds.value.includes(id)
 }
 
 // 保存收藏到本地存储
 const saveFavorites = () => {
-	try {
-		uni.setStorageSync(STORAGE_KEY_FAVORITES, favorites.value)
-	} catch (error) {
-		console.error('保存收藏失败:', error)
+	const ok = setStorage(STORAGE_KEYS.favorites, favoriteIds.value)
+	if (!ok) {
 		uni.showToast({
 			title: '保存失败',
 			icon: 'none',
@@ -418,7 +220,7 @@ const saveFavorites = () => {
 }
 
 // 切换收藏状态
-const toggleFavorite = (tool) => {
+const toggleFavorite = (tool: ToolItem) => {
 	if (isFavorite(tool.id)) {
 		handleRemove(tool.id)
 	} else {
@@ -427,10 +229,10 @@ const toggleFavorite = (tool) => {
 }
 
 // 从常用中移除
-const handleRemove = (id) => {
-	const index = favorites.value.findIndex((item) => item.id === id)
+const handleRemove = (id: string) => {
+	const index = favoriteIds.value.findIndex((itemId) => itemId === id)
 	if (index > -1) {
-		favorites.value.splice(index, 1)
+		favoriteIds.value.splice(index, 1)
 		saveFavorites()
 		// 如果删除的是金证门禁，重置显示状态
 		if (id === 'Kingdom') {
@@ -446,9 +248,9 @@ const handleRemove = (id) => {
 }
 
 // 添加到常用
-const handleAdd = (tool) => {
+const handleAdd = (tool: ToolItem) => {
 	if (!isFavorite(tool.id)) {
-		favorites.value.push(tool)
+		favoriteIds.value.push(tool.id)
 		saveFavorites()
 		uni.showToast({
 			title: '已添加',
@@ -471,7 +273,7 @@ const itemHeight = ref(0)
 const dragOffset = ref(0)
 
 // 获取拖拽样式
-const getDragStyle = (index) => {
+const getDragStyle = (index: number) => {
 	if (index === dragStartIndex.value && dragOffset.value !== 0) {
 		return {
 			transform: `translateY(${dragOffset.value}px)`,
@@ -481,7 +283,7 @@ const getDragStyle = (index) => {
 }
 
 // 开始拖拽
-const startDrag = (e, index) => {
+const startDrag = (e: TouchEvent, index: number) => {
 	dragStartIndex.value = index
 	dragStartY.value = e.touches[0].pageY
 	dragOffset.value = 0
@@ -499,7 +301,7 @@ const startDrag = (e, index) => {
 }
 
 // 处理拖拽
-const handleDrag = (e) => {
+const handleDrag = (e: TouchEvent) => {
 	if (dragStartIndex.value === -1) return
 
 	const currentY = e.touches[0].pageY
@@ -509,14 +311,14 @@ const handleDrag = (e) => {
 	let newIndex = dragStartIndex.value + moveItems
 
 	// 确保新位置在有效范围内
-	newIndex = Math.max(0, Math.min(newIndex, favorites.value.length - 1))
+	newIndex = Math.max(0, Math.min(newIndex, favoriteIds.value.length - 1))
 
 	if (newIndex !== dragEndIndex.value) {
 		dragEndIndex.value = newIndex
 		// 更新位置
-		const item = favorites.value[dragStartIndex.value]
-		favorites.value.splice(dragStartIndex.value, 1)
-		favorites.value.splice(newIndex, 0, item)
+		const item = favoriteIds.value[dragStartIndex.value]
+		favoriteIds.value.splice(dragStartIndex.value, 1)
+		favoriteIds.value.splice(newIndex, 0, item)
 		dragStartIndex.value = newIndex
 		dragStartY.value = currentY
 	}
@@ -539,7 +341,7 @@ const endDrag = () => {
 }
 
 // 处理工具项点击
-const handleItemClick = (item) => {
+const handleItemClick = (item: ToolItem) => {
 	uni.navigateTo({
 		url: item.path,
 		fail: (err) => {
@@ -577,7 +379,7 @@ const clearSearch = () => {
 }
 
 // 二维码弹窗
-const qrPopup = ref(null)
+const qrPopup = ref<{ open: () => void; close: () => void } | null>(null)
 const showQRCode = () => {
 	qrPopup.value?.open()
 }
@@ -596,7 +398,7 @@ const handleFavoritesTitleClick = () => {
 		const kingdomTool = unref(tools).find((tool) => tool.id === 'Kingdom')
 		if (kingdomTool && !isFavorite(kingdomTool.id)) {
 			// 添加到我的常用
-			favorites.value.push(kingdomTool)
+			favoriteIds.value.push(kingdomTool.id)
 			saveFavorites()
 		}
 
@@ -608,20 +410,38 @@ const handleFavoritesTitleClick = () => {
 	}
 }
 
+const normalizeFavoriteIds = (storedFavorites: unknown) => {
+	if (!Array.isArray(storedFavorites)) return []
+
+	return storedFavorites
+		.map((item) => {
+			if (typeof item === 'string') return item
+			if (item && typeof item === 'object' && 'id' in item) {
+				return String((item as { id: unknown }).id)
+			}
+			return ''
+		})
+		.filter((id, index, ids) => {
+			return id && ids.indexOf(id) === index && unref(tools).some((tool) => tool.id === id)
+		})
+}
+
 // 页面加载时从本地存储获取常用工具
 onMounted(() => {
-	try {
-		const savedFavorites = uni.getStorageSync(STORAGE_KEY_FAVORITES)
-		if (savedFavorites && Array.isArray(savedFavorites)) {
-			favorites.value = savedFavorites
-		}
+	const savedFavorites = getStorage<unknown[]>(STORAGE_KEYS.favorites, [])
+	const legacyFavorites = getStorage<unknown[]>(LEGACY_STORAGE_KEY_FAVORITES, [])
+	const nextFavoriteIds = normalizeFavoriteIds(
+		savedFavorites.length > 0 ? savedFavorites : legacyFavorites
+	)
 
-		// 如果收藏夹中有金证门禁，则显示它
-		if (favorites.value.some((item) => item.id === 'Kingdom')) {
-			showKingdom.value = true
-		}
-	} catch (error) {
-		console.error('加载收藏失败:', error)
+	favoriteIds.value = nextFavoriteIds
+	if (nextFavoriteIds.length > 0) {
+		saveFavorites()
+	}
+
+	// 如果收藏夹中有金证门禁，则显示它
+	if (favoriteIds.value.includes('Kingdom')) {
+		showKingdom.value = true
 	}
 })
 </script>

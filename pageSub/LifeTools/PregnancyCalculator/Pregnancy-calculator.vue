@@ -312,7 +312,7 @@ const dueDateObj = computed(() => {
 		date.setDate(date.getDate() + 7)
 		date.setHours(0, 0, 0, 0)
 		return date
-	} catch (error) {
+	} catch {
 		return null
 	}
 })
