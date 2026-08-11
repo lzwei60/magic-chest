@@ -4,7 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"No tests specified\"",
+    "lint": "eslint .",
+    "test": "vitest run",
     "prepare": "husky"
   },
   "repository": {
@@ -22,14 +23,22 @@
   "devDependencies": {
     "@commitlint/cli": "^19.7.1",
     "@commitlint/config-conventional": "^19.7.1",
+    "@dcloudio/types": "^3.4.32",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
     "eslint": "^9.20.1",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-vue": "^10.10.0",
+    "globals": "^14.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.0",
     "sass": "^1.84.0",
-    "sass-loader": "^10.1.1"
+    "sass-loader": "^10.1.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
+    "vue-eslint-parser": "^10.4.1"
   },
   "husky": {
     "hooks": {

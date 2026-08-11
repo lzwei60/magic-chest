@@ -51,6 +51,24 @@
 					"style": {
 						"navigationBarTitleText": "亲戚称呼计算器"
 					}
+				},
+				{
+					"path": "DoubleColorBall/Double-color-ball",
+					"style": {
+						"navigationBarTitleText": "双色球中奖查询"
+					}
+				},
+				{
+					"path": "PasswordGenerator/Password-generator",
+					"style": {
+						"navigationBarTitleText": "密码生成器"
+					}
+				},
+				{
+					"path": "RandomGenerator/Random-generator",
+					"style": {
+						"navigationBarTitleText": "随机生成器"
+					}
 				}
 			]
 		},
@@ -73,6 +91,18 @@
 					"path": "PensionCalculator/Pension-calculator",
 					"style": {
 						"navigationBarTitleText": "退休养老金计算器"
+					}
+				},
+				{
+					"path": "BonusTaxCalculator/Bonus-tax-calculator",
+					"style": {
+						"navigationBarTitleText": "年终奖个税计算器"
+					}
+				},
+				{
+					"path": "AmountChinese/Amount-chinese",
+					"style": {
+						"navigationBarTitleText": "金额大写转换器"
 					}
 				}
 			]
@@ -120,6 +150,12 @@
 					"style": {
 						"navigationBarTitleText": "社保缴费年限计算器"
 					}
+				},
+				{
+					"path": "IdCardValidator/Id-card-validator",
+					"style": {
+						"navigationBarTitleText": "身份证校验器"
+					}
 				}
 			]
 		},
@@ -130,6 +166,66 @@
 					"path": "TextDeduplication/Text-deduplication",
 					"style": {
 						"navigationBarTitleText": "文本去重器"
+					}
+				},
+				{
+					"path": "ImageTextRecognition/Image-text-recognition",
+					"style": {
+						"navigationBarTitleText": "图片文字识别"
+					}
+				},
+				{
+					"path": "JsonFormatter/Json-formatter",
+					"style": {
+						"navigationBarTitleText": "JSON格式化"
+					}
+				},
+				{
+					"path": "TextCounter/Text-counter",
+					"style": {
+						"navigationBarTitleText": "文本统计器"
+					}
+				},
+				{
+					"path": "Base64Codec/Base64-codec",
+					"style": {
+						"navigationBarTitleText": "Base64编解码"
+					}
+				},
+				{
+					"path": "UrlCodec/Url-codec",
+					"style": {
+						"navigationBarTitleText": "URL编解码"
+					}
+				},
+				{
+					"path": "CaseConverter/Case-converter",
+					"style": {
+						"navigationBarTitleText": "大小写转换器"
+					}
+				},
+				{
+					"path": "ColorConverter/Color-converter",
+					"style": {
+						"navigationBarTitleText": "颜色转换器"
+					}
+				},
+				{
+					"path": "BaseConverter/Base-converter",
+					"style": {
+						"navigationBarTitleText": "进制转换器"
+					}
+				},
+				{
+					"path": "RegexTester/Regex-tester",
+					"style": {
+						"navigationBarTitleText": "正则测试器"
+					}
+				},
+				{
+					"path": "JsonToTypes/Json-to-types",
+					"style": {
+						"navigationBarTitleText": "JSON转TS类型"
 					}
 				}
 			]
@@ -153,6 +249,12 @@
 					"path": "Countdown/Countdown",
 					"style": {
 						"navigationBarTitleText": "倒计时"
+					}
+				},
+				{
+					"path": "TimestampConverter/Timestamp-converter",
+					"style": {
+						"navigationBarTitleText": "时间戳转换器"
 					}
 				}
 			]

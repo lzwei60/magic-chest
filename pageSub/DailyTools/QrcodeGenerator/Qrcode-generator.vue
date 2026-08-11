@@ -133,8 +133,6 @@ const instance = getCurrentInstance()
 
 // 常量定义
 const MAX_LENGTH = 500
-const MIN_SIZE = 100
-const MAX_SIZE = 500
 const DEFAULT_SIZE = 200
 
 // 表单数据

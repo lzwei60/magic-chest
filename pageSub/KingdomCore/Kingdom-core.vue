@@ -200,6 +200,7 @@
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import UQRCode from '@/uni_modules/Sansnn-uQRCode/js_sdk/uqrcode/uqrcode.js'
 import { DooerCodec } from './utils/core.ts'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../utils/storage'
 
 // 标签页配置
 const tabs = [
@@ -226,6 +227,25 @@ const autoRefreshEnabled = ref(false)
 let qrCodeTimer = null
 let refreshTimer = null
 const QR_CODE_VALID_DURATION = 60 // 二维码有效期60秒
+const CARD_ID_MAX = 0xffffffff
+
+const getErrorMessage = (error, fallback) => {
+	return error instanceof Error ? error.message : fallback
+}
+
+const normalizeCardNumber = (value) => {
+	const cardNumber = String(value ?? '').trim()
+	if (!/^\d+$/.test(cardNumber)) {
+		throw new Error('卡号必须为纯数字')
+	}
+
+	const cardId = Number(cardNumber)
+	if (!Number.isSafeInteger(cardId) || cardId < 0 || cardId > CARD_ID_MAX) {
+		throw new Error('卡号超出有效范围')
+	}
+
+	return { cardNumber, cardId }
+}
 
 // 计算滚动区域高度
 const scrollHeight = computed(() => {
@@ -289,11 +309,14 @@ const generateQRCode = async () => {
 	}
 
 	try {
-		// 确保卡号为字符串类型
-		const cardid = String(selectedCard.value || '')
+		const { cardId } = normalizeCardNumber(selectedCard.value)
 		const currentTime = Date.now()
 		const codec = new DooerCodec()
-		const encryptedHex = codec.showLocalQrcode(cardid, currentTime)
+		const encryptedHex = codec.showLocalQrcode(
+			cardId,
+			currentTime,
+			QR_CODE_VALID_DURATION
+		)
 
 		const qr = new UQRCode()
 		qr.data = encryptedHex
@@ -308,11 +331,10 @@ const generateQRCode = async () => {
 		countdown.value = QR_CODE_VALID_DURATION
 		startCountdown()
 
-		console.log('二维码生成成功:', encryptedHex)
 	} catch (err) {
 		console.error('生成二维码失败:', err)
 		uni.showToast({
-			title: '生成失败，请重试',
+			title: getErrorMessage(err, '生成失败，请重试'),
 			icon: 'none',
 			duration: 2000,
 		})
@@ -447,17 +469,20 @@ const handleEdit = (item, index) => {
 
 // 保存选中的卡号
 const saveSelectedCard = () => {
-	uni.setStorageSync('selectedCard', selectedCard.value)
+	setStorage(STORAGE_KEYS.kingdomSelectedCard, selectedCard.value)
 }
 
 // 保存自动刷新设置
 const saveAutoRefreshSetting = () => {
-	uni.setStorageSync('autoRefreshEnabled', autoRefreshEnabled.value)
+	setStorage(STORAGE_KEYS.kingdomAutoRefreshEnabled, autoRefreshEnabled.value)
 }
 
 // 加载自动刷新设置
 const loadAutoRefreshSetting = () => {
-	const saved = uni.getStorageSync('autoRefreshEnabled')
+	const saved = getStorage(
+		STORAGE_KEYS.kingdomAutoRefreshEnabled,
+		getStorage('autoRefreshEnabled', null)
+	)
 	if (saved !== null && saved !== undefined) {
 		autoRefreshEnabled.value = saved
 		if (autoRefreshEnabled.value) {
@@ -504,13 +529,12 @@ const handleAdd = () => {
 		return false
 	}
 
-	// 确保卡号为字符串类型
-	const cardNumber = String(rawNumber).trim()
-
-	// 验证卡号格式（根据实际需求调整）
-	if (cardNumber.length < 4) {
+	let cardNumber = ''
+	try {
+		cardNumber = normalizeCardNumber(rawNumber).cardNumber
+	} catch (error) {
 		uni.showToast({
-			title: '卡号长度至少4位',
+			title: getErrorMessage(error, '卡号无效'),
 			icon: 'none',
 		})
 		return false
@@ -694,10 +718,8 @@ const handleClear = () => {
 
 // 保存数据到本地
 const saveCardList = () => {
-	try {
-		uni.setStorageSync('cardList', cardList.value)
-	} catch (e) {
-		console.error('保存失败:', e)
+	const ok = setStorage(STORAGE_KEYS.kingdomCardList, cardList.value)
+	if (!ok) {
 		uni.showToast({ title: '保存失败', icon: 'none' })
 	}
 }
@@ -705,7 +727,10 @@ const saveCardList = () => {
 // 从本地加载数据
 const loadCardList = () => {
 	try {
-		const list = uni.getStorageSync('cardList')
+		const list = getStorage(
+			STORAGE_KEYS.kingdomCardList,
+			getStorage('cardList', [])
+		)
 		if (list && Array.isArray(list)) {
 			// 确保所有卡号都是字符串类型
 			cardList.value = list.map((item) => ({
@@ -713,7 +738,10 @@ const loadCardList = () => {
 				value: String(item.value || ''),
 			}))
 			// 加载保存的选中卡号
-			const saved = uni.getStorageSync('selectedCard')
+				const saved = getStorage(
+					STORAGE_KEYS.kingdomSelectedCard,
+					getStorage('selectedCard', '')
+				)
 			const savedStr = saved ? String(saved) : ''
 			if (
 				savedStr &&
@@ -756,7 +784,7 @@ const scanQrCode = () => {
 				const codec = new DooerCodec()
 				const data = codec.decodeLocalQrcode(code)
 				if (data && data.cardid) {
-					const card = String(data.cardid)
+					const card = normalizeCardNumber(data.cardid).cardNumber
 					// 检查是否已存在（统一转换为字符串比较）
 					if (
 						cardList.value.some((item) => String(item.value || '') === card)
@@ -781,12 +809,18 @@ const scanQrCode = () => {
 				}
 			} catch (e) {
 				console.error('解析二维码失败:', e)
-				// 解析失败，直接使用原始结果（确保为字符串）
-				newCard.value.number = String(code)
-				uni.showToast({
-					title: '已填入卡号',
-					icon: 'success',
-				})
+				try {
+					newCard.value.number = normalizeCardNumber(code).cardNumber
+					uni.showToast({
+						title: '已填入卡号',
+						icon: 'success',
+					})
+				} catch (error) {
+					uni.showToast({
+						title: getErrorMessage(error, '卡号无效'),
+						icon: 'none',
+					})
+				}
 			}
 		},
 		fail() {

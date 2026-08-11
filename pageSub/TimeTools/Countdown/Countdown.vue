@@ -109,8 +109,9 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { onUnload, onHide, onShow } from '@dcloudio/uni-app'
+import { STORAGE_KEYS, getStorage, setStorage } from '../../../utils/storage'
 
-const STORAGE_KEY = 'timer_tasks'
+const LEGACY_STORAGE_KEY = 'timer_tasks'
 
 const tasks = ref([])
 const newTaskName = ref('')
@@ -118,6 +119,14 @@ const newTaskTime = ref('00:00:10')
 const timePickerValue = ref([0, 0, 10]) // [小时, 分钟, 秒]
 let timer = null
 let audioInstances = [] // 存储音频实例，便于管理
+
+const createTaskId = () => {
+	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+		return crypto.randomUUID()
+	}
+
+	return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 // 生成时分秒的选项数组
 const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
@@ -137,11 +146,15 @@ const completedCount = computed(() => {
 // 数据加载和保存
 const loadData = () => {
 	try {
-		const data = uni.getStorageSync(STORAGE_KEY)
+		const data = getStorage(
+			STORAGE_KEYS.timerTasks,
+			getStorage(LEGACY_STORAGE_KEY, '')
+		)
 		if (data && data.length > 0) {
 			// 兼容旧数据格式
-			tasks.value = JSON.parse(data).map((task) => {
-				if (!task.hasOwnProperty('createdAt')) {
+			const savedTasks = typeof data === 'string' ? JSON.parse(data) : data
+			tasks.value = savedTasks.map((task) => {
+				if (!Object.prototype.hasOwnProperty.call(task, 'createdAt')) {
 					task.createdAt = Date.now()
 				}
 				return task
@@ -154,10 +167,8 @@ const loadData = () => {
 }
 
 const saveData = () => {
-	try {
-		uni.setStorageSync(STORAGE_KEY, JSON.stringify(tasks.value))
-	} catch (e) {
-		console.error('保存数据失败:', e)
+	const ok = setStorage(STORAGE_KEYS.timerTasks, tasks.value)
+	if (!ok) {
 		uni.showToast({ title: '保存失败', icon: 'none' })
 	}
 }
@@ -241,7 +252,7 @@ const addTask = () => {
 	}
 
 	tasks.value.push({
-		id: Date.now(),
+		id: createTaskId(),
 		title: name,
 		total,
 		remaining: total,
