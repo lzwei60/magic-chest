@@ -14,6 +14,9 @@ export class DooerCodec {
 	 * @returns
 	 */
 	showLocalQrcode(cardid: number, currentTime: number, timeout = this.timeout) {
+		if (!Number.isSafeInteger(cardid) || cardid < 0 || cardid > 0xffffffff) {
+			throw new Error('Invalid card id')
+		}
 		const time = currentTime + timeout * 1000
 		const count = this.openCount
 		const seekByte20 = this.getQrcodeBytes(cardid, time, count)

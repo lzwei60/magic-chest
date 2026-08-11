@@ -120,6 +120,14 @@ const timePickerValue = ref([0, 0, 10]) // [小时, 分钟, 秒]
 let timer = null
 let audioInstances = [] // 存储音频实例，便于管理
 
+const createTaskId = () => {
+	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+		return crypto.randomUUID()
+	}
+
+	return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 // 生成时分秒的选项数组
 const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
@@ -244,7 +252,7 @@ const addTask = () => {
 	}
 
 	tasks.value.push({
-		id: Date.now(),
+		id: createTaskId(),
 		title: name,
 		total,
 		remaining: total,

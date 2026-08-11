@@ -174,6 +174,7 @@ const currencyOptions = [
 	{ value: 'GBP', text: '英镑 (GBP)' },
 	{ value: 'HKD', text: '港币 (HKD)' },
 ]
+const supportedCurrencySet = new Set(currencyOptions.map((item) => item.value))
 
 // 货币符号
 const currencySymbols = {
@@ -230,7 +231,8 @@ const detectLocalCurrency = () => {
 		const res = uni.getSystemInfoSync()
 		const locale = res.language || 'zh'
 		const langToCurrency = { zh: 'CNY', en: 'USD', ja: 'JPY', ko: 'KRW' }
-		return langToCurrency[locale] || 'CNY'
+		const detectedCurrency = langToCurrency[locale] || 'CNY'
+		return supportedCurrencySet.has(detectedCurrency) ? detectedCurrency : 'CNY'
 	} catch {
 		return 'CNY'
 	}

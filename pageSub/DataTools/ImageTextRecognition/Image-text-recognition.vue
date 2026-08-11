@@ -94,7 +94,7 @@
 				<view
 					class="action-btn recognize-btn"
 					:class="{
-						disabled: !selectedImage || isRecognizing,
+						disabled: !selectedImage || isRecognizing || !ocrReady,
 						recognizing: isRecognizing,
 					}"
 					@click="recognizeText">
@@ -105,6 +105,17 @@
 						:class="{ rotating: isRecognizing }"></uni-icons>
 					<text>{{ isRecognizing ? '识别中...' : '开始识别' }}</text>
 				</view>
+			</view>
+		</view>
+
+		<!-- OCR 未配置提示 -->
+		<view class="config-card" v-if="!ocrReady">
+			<view class="card-header">
+				<uni-icons type="info" size="20" color="#f0ad4e"></uni-icons>
+				<text class="card-title">OCR 服务未配置</text>
+			</view>
+			<view class="config-content">
+				<text class="config-text">{{ OCR_SETUP_GUIDE }}</text>
 			</view>
 		</view>
 
@@ -136,19 +147,41 @@
 	</view>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { STORAGE_KEYS, getStorage, setStorage } from '../../../utils/storage'
+import {
+	OCR_SETUP_GUIDE,
+	createOcrEnv,
+	recognizeImageText,
+	resolveOcrProvider,
+} from '../../../utils/ocr'
 
 // 常量定义
 const MAX_HISTORY = 20
-const OCR_API_URL = process.env.VUE_APP_OCR_API_URL || ''
+
+type HistoryItem = { text: string; time: string }
+
+const readEnv = (key: string): string => {
+	return typeof process !== 'undefined'
+		? (process.env[key] as string | undefined) || ''
+		: ''
+}
+
+// OCR 运行环境与通道选择：优先自建 API，其次微信服务市场
+const ocrEnv = createOcrEnv(readEnv)
+const ocrProvider = computed(() => resolveOcrProvider(ocrEnv))
+const ocrReady = computed(() => Boolean(ocrProvider.value))
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+	return error instanceof Error ? error.message : fallback
+}
 
 // 状态数据
 const selectedImage = ref('')
 const recognitionResult = ref('')
 const isRecognizing = ref(false)
-const historyList = ref([])
+const historyList = ref<HistoryItem[]>([])
 
 // 选择图片
 const chooseImage = () => {
@@ -211,6 +244,14 @@ const recognizeText = async () => {
 	if (!selectedImage.value || isRecognizing.value) {
 		return
 	}
+	if (!ocrReady.value) {
+		uni.showToast({
+			title: 'OCR 服务未配置',
+			icon: 'none',
+			duration: 2000,
+		})
+		return
+	}
 
 	isRecognizing.value = true
 	uni.showLoading({
@@ -219,12 +260,16 @@ const recognizeText = async () => {
 	})
 
 	try {
-		const result = await recognizeWithAPI(selectedImage.value)
+		const text = await recognizeImageText({
+			env: ocrEnv,
+			imagePath: selectedImage.value,
+			feature: 'general-text',
+		})
 
-		if (result && result.text) {
-			recognitionResult.value = result.text
+		if (text) {
+			recognitionResult.value = text
 			// 保存到历史记录
-			saveToHistory(result.text)
+			saveToHistory(text)
 			uni.showToast({
 				title: '识别成功',
 				icon: 'success',
@@ -239,9 +284,9 @@ const recognizeText = async () => {
 	} catch (error) {
 		console.error('识别失败:', error)
 		uni.showToast({
-			title: error.message || '识别失败，请重试',
-			icon: 'error',
-			duration: 2000,
+			title: getErrorMessage(error, '识别失败，请重试'),
+			icon: 'none',
+			duration: 2500,
 		})
 	} finally {
 		isRecognizing.value = false
@@ -249,64 +294,11 @@ const recognizeText = async () => {
 	}
 }
 
-// 使用后端API调用OCR服务。
-const recognizeWithAPI = async (imagePath) => {
-	return new Promise((resolve, reject) => {
-		if (!OCR_API_URL) {
-			reject(new Error('OCR服务未配置'))
-			return
-		}
-
-		const fsManager = uni.getFileSystemManager?.()
-		if (!fsManager) {
-			reject(new Error('当前平台不支持读取本地图片'))
-			return
-		}
-
-		// 将图片转换为base64
-		fsManager.readFile({
-			filePath: imagePath,
-			encoding: 'base64',
-			success: (res) => {
-				const base64 = res.data
-
-				uni.request({
-					url: OCR_API_URL,
-					method: 'POST',
-					header: {
-						'Content-Type': 'application/json',
-					},
-					data: {
-						image: base64,
-						type: 'general', // 通用文字识别
-					},
-					timeout: 30000,
-					success: (apiRes) => {
-						if (apiRes.statusCode === 200 && apiRes.data && apiRes.data.text) {
-							resolve({
-								text: apiRes.data.text,
-							})
-						} else {
-							reject(new Error(apiRes.data?.message || '识别失败'))
-						}
-					},
-					fail: (err) => {
-						reject(err)
-					},
-				})
-			},
-			fail: () => {
-				reject(new Error('读取图片失败'))
-			},
-		})
-	})
-}
-
 // 保存到历史记录
-const saveToHistory = (text) => {
+const saveToHistory = (text: string) => {
 	if (!text || !text.trim()) return
 
-	const historyItem = {
+	const historyItem: HistoryItem = {
 		text: text.trim(),
 		time: formatTime(new Date()),
 	}
@@ -324,7 +316,7 @@ const saveToHistory = (text) => {
 }
 
 // 使用历史记录项
-const useHistoryItem = (item) => {
+const useHistoryItem = (item: HistoryItem) => {
 	recognitionResult.value = item.text
 	uni.showToast({
 		title: '已加载',
@@ -370,7 +362,7 @@ const clearResult = () => {
 }
 
 // 复制历史记录项
-const copyHistoryItem = (item) => {
+const copyHistoryItem = (item: HistoryItem) => {
 	uni.setClipboardData({
 		data: item.text,
 		success: () => {
@@ -387,7 +379,7 @@ const copyHistoryItem = (item) => {
 }
 
 // 删除历史记录项
-const deleteHistoryItem = (index) => {
+const deleteHistoryItem = (index: number) => {
 	historyList.value.splice(index, 1)
 	saveHistoryToStorage()
 	uni.showToast({
@@ -433,12 +425,12 @@ const saveHistoryToStorage = () => {
 const loadHistoryFromStorage = () => {
 	const stored = getStorage(STORAGE_KEYS.ocrHistory, [])
 	if (Array.isArray(stored)) {
-		historyList.value = stored
+		historyList.value = stored as HistoryItem[]
 	}
 }
 
 // 格式化时间
-const formatTime = (date) => {
+const formatTime = (date: Date) => {
 	const year = date.getFullYear()
 	const month = String(date.getMonth() + 1).padStart(2, '0')
 	const day = String(date.getDate()).padStart(2, '0')
@@ -463,6 +455,7 @@ onMounted(() => {
 	.image-card,
 	.result-card,
 	.history-card,
+	.config-card,
 	.tips-card {
 		background: #fff;
 		border-radius: 24rpx;
@@ -510,6 +503,25 @@ onMounted(() => {
 			&:active {
 				background: rgba(0, 0, 0, 0.05);
 			}
+		}
+	}
+
+	// OCR 未配置提示卡片
+	.config-card {
+		border: 2rpx solid #f0ad4e;
+
+		.config-content {
+			background: rgba(240, 173, 78, 0.08);
+			border-radius: 16rpx;
+			padding: 24rpx;
+		}
+
+		.config-text {
+			font-size: 26rpx;
+			color: #8a6d3b;
+			line-height: 1.8;
+			white-space: pre-wrap;
+			word-break: break-all;
 		}
 	}
 
